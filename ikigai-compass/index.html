@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ikigai Compass - Daily Reflection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            color: #e8e8f0;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #a8a8b8;
+            font-size: 1.1rem;
+        }
+
+        .compass-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 40px;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        .compass {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .compass-segment {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            transform-origin: bottom right;
+            border-radius: 100% 0;
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .segment-love {
+            top: 0;
+            left: 0;
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(255, 107, 107, 0.1));
+            transform: rotate(0deg);
+        }
+
+        .segment-good {
+            top: 0;
+            right: 0;
+            background: linear-gradient(225deg, rgba(78, 205, 196, 0.3), rgba(78, 205, 196, 0.1));
+            transform: rotate(90deg);
+        }
+
+        .segment-need {
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(315deg, rgba(69, 183, 209, 0.3), rgba(69, 183, 209, 0.1));
+            transform: rotate(180deg);
+        }
+
+        .segment-sustain {
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(45deg, rgba(150, 206, 180, 0.3), rgba(150, 206, 180, 0.1));
+            transform: rotate(270deg);
+        }
+
+        .compass-labels {
+            position: absolute;
+            inset: 0;
+        }
+
+        .label {
+            position: absolute;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .label-love { top: 20px; left: 50%; transform: translateX(-50%); color: #ff6b6b; }
+        .label-good { right: 20px; top: 50%; transform: translateY(-50%); color: #4ecdc4; }
+        .label-need { bottom: 20px; right: 50%; transform: translateX(50%); color: #45b7d1; }
+        .label-sustain { left: 20px; bottom: 50%; transform: translateY(50%); color: #96ceb4; }
+
+        .reflection-form {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .question-group {
+            margin-bottom: 25px;
+        }
+
+        .question-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+
+        .question-love { color: #ff6b6b; }
+        .question-good { color: #4ecdc4; }
+        .question-need { color: #45b7d1; }
+        .question-sustain { color: #96ceb4; }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            color: #e8e8f0;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 80px;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: rgba(255,255,255,0.3);
+            box-shadow: 0 0 20px rgba(255,255,255,0.1);
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .history {
+            margin-top: 40px;
+        }
+
+        .history h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #a8a8b8;
+        }
+
+        .history-item {
+            background: rgba(255,255,255,0.03);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4ecdc4;
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        .history-date {
+            font-weight: 600;
+            color: #4ecdc4;
+            margin-bottom: 10px;
+        }
+
+        .balance-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px rgba(255,255,255,0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        @media (max-width: 768px) {
+            .compass-container {
+                width: 250px;
+                height: 250px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .reflection-form {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Ikigai Compass</h1>
+            <p>Navigate your purpose through gentle daily reflection</p>
+        </div>
+
+        <div class="compass-container">
+            <div class="compass">
+                <div class="compass-segment segment-love" id="segment-love"></div>
+                <div class="compass-segment segment-good" id="segment-good"></div>
+                <div class="compass-segment segment-need" id="segment-need"></div>
+                <div class="compass-segment segment-sustain" id="segment-sustain"></div>
+                <div class="balance-indicator"></div>
+                <div class="compass-labels">
+                    <div class="label label-love">Love</div>
+                    <div class="label label-good">Good At</div>
+                    <div class="label label-need">World Needs</div>
+                    <div class="label label-sustain">Sustains</div>
+                </div>
+            </div>
+        </div>
+
+        <form class="reflection-form" id="reflectionForm">
+            <div class="question-group">
+                <label class="question-love">What did I love today?</label>
+                <textarea id="love" placeholder="What brought you joy and passion today?"></textarea>
+            </div>
+
+            <div class="question-group">
+                <label class="question-good">What was I good at today?</label>
+                <textarea id="good" placeholder="Where did your skills and talents shine?"></textarea>
+            </div>
+
+            <div class="question-group">
+                <label class="question-need">What did the world need from me today?</label>
+                <textarea id="need" placeholder="How did you contribute or make a difference?"></textarea>
+            </div>
+
+            <div class="question-group">
+                <label class="question-sustain">What sustained me today?</label>
+                <textarea id="sustain" placeholder="What gave you energy or provided for your needs?"></textarea>
+            </div>
+
+            <button type="submit" class="submit-btn">Reflect & Save</button>
+        </form>
+
+        <div class="history" id="history">
+            <h3>Your Journey</h3>
+            <div id="historyItems"></div>
+        </div>
+    </div>
+
+    <script>
+        class IkigaiCompass {
+            constructor() {
+                this.reflections = JSON.parse(localStorage.getItem('ikigaiReflections')) || [];
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.updateCompass();
+                this.renderHistory();
+            }
+
+            setupEventListeners() {
+                document.getElementById('reflectionForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveReflection();
+                });
+
+                // Update compass as user types
+                ['love', 'good', 'need', 'sustain'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => {
+                        this.updateCompass();
+                    });
+                });
+            }
+
+            saveReflection() {
+                const love = document.getElementById('love').value.trim();
+                const good = document.getElementById('good').value.trim();
+                const need = document.getElementById('need').value.trim();
+                const sustain = document.getElementById('sustain').value.trim();
+
+                if (!love && !good && !need && !sustain) {
+                    alert('Please fill in at least one reflection.');
+                    return;
+                }
+
+                const reflection = {
+                    date: new Date().toISOString().split('T')[0],
+                    timestamp: Date.now(),
+                    love: love,
+                    good: good,
+                    need: need,
+                    sustain: sustain,
+                    balance: this.calculateBalance({ love, good, need, sustain })
+                };
+
+                // Remove existing reflection for today if it exists
+                this.reflections = this.reflections.filter(r => r.date !== reflection.date);
+                this.reflections.unshift(reflection);
+
+                // Keep only last 30 reflections
+                this.reflections = this.reflections.slice(0, 30);
+
+                localStorage.setItem('ikigaiReflections', JSON.stringify(this.reflections));
+
+                // Clear form
+                document.getElementById('reflectionForm').reset();
+                
+                this.updateCompass();
+                this.renderHistory();
+
+                // Show success feedback
+                this.showSuccessFeedback();
+            }
+
+            calculateBalance(reflection) {
+                const values = {
+                    love: reflection.love ? reflection.love.length : 0,
+                    good: reflection.good ? reflection.good.length : 0,
+                    need: reflection.need ? reflection.need.length : 0,
+                    sustain: reflection.sustain ? reflection.sustain.length : 0
+                };
+
+                const total = values.love + values.good + values.need + values.sustain;
+                if (total === 0) return { love: 0, good: 0, need: 0, sustain: 0 };
+
+                return {
+                    love: values.love / total,
+                    good: values.good / total,
+                    need: values.need / total,
+                    sustain: values.sustain / total
+                };
+            }
+
+            getCurrentBalance() {
+                const love = document.getElementById('love').value.trim();
+                const good = document.getElementById('good').value.trim();
+                const need = document.getElementById('need').value.trim();
+                const sustain = document.getElementById('sustain').value.trim();
+
+                return this.calculateBalance({ love, good, need, sustain });
+            }
+
+            updateCompass() {
+                const balance = this.getCurrentBalance();
+                
+                // Update segment intensities based on current input
+                const segments = {
+                    'segment-love': balance.love,
+                    'segment-good': balance.good,
+                    'segment-need': balance.need,
+                    'segment-sustain': balance.sustain
+                };
+
+                Object.entries(segments).forEach(([id, intensity]) => {
+                    const element = document.getElementById(id);
+                    const opacity = Math.max(0.1, intensity * 0.8);
+                    element.style.opacity = opacity;
+                });
+            }
+
+            renderHistory() {
+                const historyContainer = document.getElementById('historyItems');
+                
+                if (this.reflections.length === 0) {
+                    historyContainer.innerHTML = '<p style="text-align: center; color: #a8a8b8;">No reflections yet. Start your journey above!</p>';
+                    return;
+                }
+
+                historyContainer.innerHTML = this.reflections.map(reflection => {
+                    const date = new Date(reflection.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+
+                    const entries = [
+                        { label: 'Love', value: reflection.love, color: '#ff6b6b' },
+                        { label: 'Good At', value: reflection.good, color: '#4ecdc4' },
+                        { label: 'World Needs', value: reflection.need, color: '#45b7d1' },
+                        { label: 'Sustains', value: reflection.sustain, color: '#96ceb4' }
+                    ].filter(entry => entry.value);
+
+                    return `
+                        <div class="history-item">
+                            <div class="history-date">${date}</div>
+                            ${entries.map(entry => `
+                                <div style="margin: 10px 0;">
+                                    <strong style="color: ${entry.color};">${entry.label}:</strong>
+                                    <p style="margin: 5px 0; line-height: 1.5;">${entry.value}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            showSuccessFeedback() {
+                const button = document.querySelector('.submit-btn');
+                const originalText = button.textContent;
+                button.textContent = '✨ Reflected!';
+                button.style.background = 'linear-gradient(45deg, #96ceb4, #4ecdc4)';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'linear-gradient(45deg, #ff6b6b, #4ecdc4)';
+                }, 2000);
+            }
+        }
+
+        // Initialize the app
+        new IkigaiCompass();
+    </script>
+</body>
+</html>
