@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrecisionCraft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #1a1914;
+            --bg-light: #2a251f;
+            --accent: #d4af37;
+            --text-primary: #f5f2e8;
+            --text-secondary: #a69b8a;
+            --border: #3d362a;
+            --error: #d2432c;
+            --success: #4a7c59;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Crimson Text', serif;
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(212, 175, 55, 0.03) 0%, transparent 50%),
+                url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.015"><circle cx="30" cy="30" r="1"/></g></g></svg>');
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 300;
+            font-size: 2.5rem;
+            letter-spacing: 0.05em;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+
+        .precision-note {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent);
+            background: rgba(212, 175, 55, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 2px;
+            display: inline-block;
+            border-left: 3px solid var(--accent);
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 3rem;
+            margin-bottom: 4rem;
+        }
+
+        .tool-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            border-radius: 3px;
+        }
+
+        .tool-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+        }
+
+        input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+        }
+
+        .result {
+            background: rgba(74, 124, 89, 0.1);
+            border: 1px solid var(--success);
+            padding: 1rem;
+            border-radius: 2px;
+            margin-top: 1rem;
+        }
+
+        .result-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        .tolerance-visual {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(212, 175, 55, 0.05);
+            border-radius: 2px;
+            border: 1px dashed var(--accent);
+        }
+
+        .tolerance-bar {
+            height: 20px;
+            background: var(--bg-dark);
+            border-radius: 2px;
+            position: relative;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .tolerance-range {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), rgba(212, 175, 55, 0.6));
+            position: absolute;
+            top: 0;
+            transition: all 0.3s ease;
+        }
+
+        .stackup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .stackup-item:last-child {
+            border-bottom: none;
+            font-weight: 500;
+            color: var(--accent);
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            border-top: 2px solid var(--accent);
+        }
+
+        .add-tolerance {
+            background: transparent;
+            border: 1px dashed var(--border);
+            color: var(--text-secondary);
+            padding: 0.75rem;
+            width: 100%;
+            border-radius: 2px;
+            cursor: pointer;
+            font-family: 'Crimson Text', serif;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .add-tolerance:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .remove-item {
+            background: none;
+            border: none;
+            color: var(--error);
+            cursor: pointer;
+            padding: 0.25rem;
+            margin-left: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PrecisionCraft</h1>
+            <p class="subtitle">Manufacturing tolerance calculator for makers and engineers</p>
+            <div class="precision-note">
+                Inspired by LEGO's legendary 0.002mm precision standard
+            </div>
+        </header>
+
+        <div class="tools-grid">
+            <div class="tool-card">
+                <h2 class="tool-title">Bilateral Tolerance</h2>
+                <div class="input-group">
+                    <label for="nominal">Nominal Dimension (mm)</label>
+                    <input type="number" id="nominal" step="0.001" value="10.000">
+                </div>
+                <div class="input-group">
+                    <label for="plus-tol">Plus Tolerance (mm)</label>
+                    <input type="number" id="plus-tol" step="0.001" value="0.050">
+                </div>
+                <div class="input-group">
+                    <label for="minus-tol">Minus Tolerance (mm)</label>
+                    <input type="number" id="minus-tol" step="0.001" value="0.050">
+                </div>
+                <div class="result" id="tolerance-result">
+                    <div class="result-value">10.000 ±0.050 mm</div>
+                    <div style="font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-secondary);">
+                        Range: 9.950 - 10.050 mm<br>
+                        Total tolerance: 0.100 mm
+                    </div>
+                </div>
+                <div class="tolerance-visual">
+                    <div>Tolerance Range Visualization</div>
+                    <div class="tolerance-bar">
+                        <div class="tolerance-range" id="tolerance-bar" style="left: 25%; width: 50%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
+                        <span id="min-val">9.950</span>
+                        <span id="nom-val">10.000</span>
+                        <span id="max-val">10.050</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-card">
+                <h2 class="tool-title">Tolerance Stack-up</h2>
+                <div id="stackup-items">
+                    <div class="input-group stackup-input">
+                        <label>Component 1 Tolerance (±mm)</label>
+                        <input type="number" step="0.001" value="0.020" onchange="updateStackup()">
+                        <button class="remove-item" onclick="removeStackupItem(this)">×</button>
+                    </div>
+                    <div class="input-group stackup-input">
+                        <label>Component 2 Tolerance (±mm)</label>
+                        <input type="number" step="0.001" value="0.030" onchange="updateStackup()">
+                        <button class="remove-item" onclick="removeStackupItem(this)">×</button>
+                    </div>
+                </div>
+                <button class="add-tolerance" onclick="addStackupItem()">+ Add Component Tolerance</button>
+                <div class="result">
+                    <div class="result-value" id="stackup-result">Total Stack-up: ±0.036 mm</div>
+                    <div style="font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-secondary);" id="stackup-method">
+                        RSS Method: √(0.020² + 0.030²) = 0.036 mm
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-card">
+                <h2 class="tool-title">Precision Grade</h2>
+                <div class="input-group">
+                    <label for="tolerance-value">Your Tolerance (mm)</label>
+                    <input type="number" id="tolerance-value" step="0.0001" value="0.050">
+                </div>
+                <div class="input-group">
+                    <label for="dimension">Feature Size (mm)</label>
+                    <input type="number" id="dimension" step="0.1" value="10.0">
+                </div>
+                <div class="result" id="grade-result">
+                    <div class="result-value">IT Grade: ~IT7</div>
+                    <div style="font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-secondary);">
+                        Precision Level: High precision machining<br>
+                        Relative precision: 0.50%
+                    </div>
+                </div>
+                <div class="tolerance-visual">
+                    <div style="margin-bottom: 1rem;">Industry Precision Comparison</div>
+                    <div class="stackup-item">
+                        <span>LEGO Brick Precision</span>
+                        <span>±0.001 mm</span>
+                    </div>
+                    <div class="stackup-item">
+                        <span>Swiss Watch Making</span>
+                        <span>±0.005 mm</span>
+                    </div>
+                    <div class="stackup-item">
+                        <span>Precision Machining</span>
+                        <span>±0.025 mm</span>
+                    </div>
+                    <div class="stackup-item">
+                        <span>Your Tolerance</span>
+                        <span id="your-tolerance">±0.050 mm</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateTolerance() {
+            const nominal = parseFloat(document.getElementById('nominal').value) || 0;
+            const plusTol = parseFloat(document.getElementById('plus-tol').value) || 0;
+            const minusTol = parseFloat(document.getElementById('minus-tol').value) || 0;
+            
+            const maxVal = nominal + plusTol;
+            const minVal = nominal - minusTol;
+            const totalTol = plusTol + minusTol;
+            
+            document.getElementById('tolerance-result').innerHTML = `
+                <div class="result-value">${nominal.toFixed(3)} +${plusTol.toFixed(3)}/-${minusTol.toFixed(3)} mm</div>
+                <div style="font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-secondary);">
+                    Range: ${minVal.toFixed(3)} - ${maxVal.toFixed(3)} mm<br>
+                    Total tolerance: ${totalTol.toFixed(3)} mm
+                </div>
+            `;
+            
+            document.getElementById('min-val').textContent = minVal.toFixed(3);
+            document.getElementById('nom-val').textContent = nominal.toFixed(3);
+            document.getElementById('max-val').textContent = maxVal.toFixed(3);
+            
+            // Update visual bar
+            const range = Math.max(totalTol * 2, 0.1);
+            const barWidth = (totalTol / range) * 100;
+            const barLeft = 50 - (barWidth / 2);
+            document.getElementById('tolerance-bar').style.left = barLeft + '%';
+            document.getElementById('tolerance-bar').style.width = barWidth + '%';
+        }
+
+        function updateStackup() {
+            const inputs = document.querySelectorAll('#stackup-items input');
+            let rssSum = 0;
+            let worstCase = 0;
+            
+            inputs.forEach(input => {
+                const val = parseFloat(input.value) || 0;
+                rssSum += val * val;
+                worstCase += val;
+            });
+            
+            const rssResult = Math.sqrt(rssSum);
+            
+            document.getElementById('stackup-result').textContent = `Total Stack-up: ±${rssResult.toFixed(3)} mm`;
+            document.getElementById('stackup-method').innerHTML = `
+                RSS Method: ${rssResult.toFixed(3)} mm<br>
+                Worst Case: ±${worstCase.toFixed(3)} mm
+            `;
+        }
+
+        function addStackupItem() {
+            const container = document.getElementById('stackup-items');
+            const count = container.children.length + 1;
+            const newItem = document.createElement('div');
+            newItem.className = 'input-group stackup-input';
+            newItem.innerHTML = `
+                <label>Component ${count} Tolerance (±mm)</label>
+                <input type="number" step="0.001" value="0.010" onchange="updateStackup()">
+                <button class="remove-item" onclick="removeStackupItem(this)">×</button>
+            `;
+            container.appendChild(newItem);
+            updateStackup();
+        }
+
+        function removeStackupItem(button) {
+            button.parentElement.remove();
+            updateStackup();
+        }
+
+        function updateGrade() {
+            const tolerance = parseFloat(document.getElementById('tolerance-value').value) || 0;
+            const dimension = parseFloat(document.getElementById('dimension').value) || 1;
+            
+            const relativePrecision = (tolerance / dimension) * 100;
+            
+            let grade = 'IT12+';
+            let description = 'Rough machining';
+            
+            if (tolerance <= 0.002) {
+                grade = 'IT1-IT3';
+                description = 'Ultra-precision (LEGO level)';
+            } else if (tolerance <= 0.010) {
+                grade = 'IT4-IT5';
+                description = 'Precision grinding';
+            } else if (tolerance <= 0.025) {
+                grade = 'IT6-IT7';
+                description = 'High precision machining';
+            } else if (tolerance <= 0.060) {
+                grade = 'IT8-IT9';
+                description = 'Standard machining';
+            } else if (tolerance <= 0.150) {
+                grade = 'IT10-IT11';
+                description = 'General machining';
+            }
+            
+            document.getElementById('grade-result').innerHTML = `
+                <div class="result-value">IT Grade: ~${grade}</div>
+                <div style="font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-secondary);">
+                    Precision Level: ${description}<br>
+                    Relative precision: ${relativePrecision.toFixed(2)}%
+                </div>
+            `;
+            
+            document.getElementById('your-tolerance').textContent = `±${tolerance.toFixed(3)} mm`;
+        }
+
+        // Event listeners
+        document.getElementById('nominal').addEventListener('input', updateTolerance);
+        document.getElementById('plus-tol').addEventListener('input', updateTolerance);
+        document.getElementById('minus-tol').addEventListener('input', updateTolerance);
+        document.getElementById('tolerance-value').addEventListener('input', updateGrade);
+        document.getElementById('dimension').addEventListener('input', updateGrade);
+
+        // Initialize
+        updateTolerance();
+        updateStackup();
+        updateGrade();
+    </script>
+</body>
+</html>
