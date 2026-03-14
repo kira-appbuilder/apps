@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Garden Curator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Serif 4', serif;
+            background: #1a1b1e;
+            color: #e8e3d8;
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(76, 175, 80, 0.02) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(139, 195, 74, 0.03) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.01'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3Ccircle cx='53' cy='53' r='1'/%3E%3Ccircle cx='30' cy='7' r='1'/%3E%3Ccircle cx='30' cy='53' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .title {
+            font-family: 'Crimson Text', serif;
+            font-size: 3.5rem;
+            font-weight: 600;
+            color: #7cb342;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #a8a39a;
+            font-weight: 300;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            margin-bottom: 80px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+        }
+
+        .section {
+            background: rgba(40, 42, 47, 0.6);
+            padding: 40px 35px;
+            border: 1px solid rgba(124, 179, 66, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            font-family: 'Crimson Text', serif;
+            font-size: 1.8rem;
+            color: #8bc34a;
+            margin-bottom: 24px;
+            font-style: italic;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #c5bfb6;
+            font-size: 0.95rem;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(26, 27, 30, 0.8);
+            border: 1px solid rgba(124, 179, 66, 0.2);
+            color: #e8e3d8;
+            font-family: 'Source Serif 4', serif;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #7cb342;
+            box-shadow: 0 0 0 2px rgba(124, 179, 66, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #7cb342 0%, #689f38 100%);
+            color: #1a1b1e;
+            border: none;
+            padding: 14px 28px;
+            font-family: 'Source Serif 4', serif;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: lowercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #8bc34a 0%, #7cb342 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(124, 179, 66, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #8bc34a;
+            border: 1px solid rgba(124, 179, 66, 0.4);
+            padding: 12px 24px;
+            margin-right: 12px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(124, 179, 66, 0.1);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .item {
+            background: rgba(26, 27, 30, 0.6);
+            padding: 20px;
+            margin-bottom: 16px;
+            border-left: 3px solid #7cb342;
+            border-top: 1px solid rgba(124, 179, 66, 0.1);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .item-type {
+            font-size: 0.8rem;
+            color: #8bc34a;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .item-date {
+            font-size: 0.8rem;
+            color: #7a756c;
+        }
+
+        .item-title {
+            font-weight: 500;
+            color: #e8e3d8;
+            margin-bottom: 6px;
+        }
+
+        .item-description {
+            color: #b5b0a7;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .weekend-ritual {
+            grid-column: 1 / -1;
+            background: rgba(124, 179, 66, 0.05);
+            border: 1px solid rgba(124, 179, 66, 0.2);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .ritual-title {
+            font-family: 'Crimson Text', serif;
+            font-size: 2.2rem;
+            color: #8bc34a;
+            margin-bottom: 20px;
+        }
+
+        .ritual-description {
+            font-size: 1.1rem;
+            color: #a8a39a;
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .connections {
+            display: grid;
+            gap: 16px;
+            margin-top: 30px;
+        }
+
+        .connection {
+            background: rgba(26, 27, 30, 0.4);
+            padding: 20px;
+            border-left: 2px solid #7cb342;
+            text-align: left;
+        }
+
+        .connection-title {
+            font-weight: 500;
+            color: #8bc34a;
+            margin-bottom: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #7a756c;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: rgba(26, 27, 30, 0.4);
+            border: 1px solid rgba(124, 179, 66, 0.1);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            color: #8bc34a;
+            font-weight: 500;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #a8a39a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Digital Garden Curator</h1>
+            <p class="subtitle">Tend to your ideas like a garden — collect, nurture, and harvest insights through gentle weekly rhythms</p>
+        </div>
+
+        <div class="main-content">
+            <div class="section">
+                <h2 class="section-title">plant new seeds</h2>
+                <form id="add-item-form">
+                    <div class="form-group">
+                        <label for="item-type">Type of seed</label>
+                        <select id="item-type">
+                            <option value="article">article</option>
+                            <option value="thought">thought</option>
+                            <option value="quote">quote</option>
+                            <option value="image">image</option>
+                            <option value="conversation">conversation</option>
+                            <option value="book">book</option>
+                            <option value="question">question</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-title">Title or source</label>
+                        <input type="text" id="item-title" placeholder="What caught your attention?">
+                    </div>
+                    <div class="form-group">
+                        <label for="item-description">Your reflection</label>
+                        <textarea id="item-description" placeholder="Why did this resonate? What questions does it raise?"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-url">Link (optional)</label>
+                        <input type="url" id="item-url" placeholder="https://...">
+                    </div>
+                    <button type="submit" class="btn">plant seed</button>
+                </form>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">garden overview</h2>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number" id="total-items">0</span>
+                        <span class="stat-label">seeds planted</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="this-week-items">0</span>
+                        <span class="stat-label">this week</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button class="btn-secondary" onclick="showView('garden')">tend garden</button>
+                    <button class="btn-secondary" onclick="showView('ritual')">weekend ritual</button>
+                </div>
+                <button class="btn" onclick="exportGarden()">harvest insights</button>
+            </div>
+
+            <div class="weekend-ritual hidden" id="ritual-view">
+                <h2 class="ritual-title">weekend ritual</h2>
+                <p class="ritual-description">Take a moment to connect the dots between your collected ideas. What patterns emerge? What unexpected connections can you discover?</p>
+                <button class="btn" onclick="generateConnections()">discover connections</button>
+                <div class="connections" id="connections-container"></div>
+            </div>
+        </div>
+
+        <div class="section" id="garden-view">
+            <h2 class="section-title">your growing garden</h2>
+            <div id="items-container">
+                <div class="empty-state">
+                    Your garden is waiting for its first seed...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DigitalGarden {
+            constructor() {
+                this.items = JSON.parse(localStorage.getItem('garden-items') || '[]');
+                this.currentView = 'garden';
+                this.init();
+            }
+
+            init() {
+                this.renderItems();
+                this.updateStats();
+                this.bindEvents();
+            }
+
+            bindEvents() {
+                document.getElementById('add-item-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addItem();
+                });
+            }
+
+            addItem() {
+                const type = document.getElementById('item-type').value;
+                const title = document.getElementById('item-title').value.trim();
+                const description = document.getElementById('item-description').value.trim();
+                const url = document.getElementById('item-url').value.trim();
+
+                if (!title || !description) {
+                    alert('Please fill in both title and reflection');
+                    return;
+                }
+
+                const item = {
+                    id: Date.now(),
+                    type,
+                    title,
+                    description,
+                    url,
+                    date: new Date().toISOString(),
+                    planted: new Date().toLocaleDateString()
+                };
+
+                this.items.unshift(item);
+                this.saveItems();
+                this.renderItems();
+                this.updateStats();
+                this.clearForm();
+            }
+
+            clearForm() {
+                document.getElementById('add-item-form').reset();
+            }
+
+            saveItems() {
+                localStorage.setItem('garden-items', JSON.stringify(this.items));
+            }
+
+            renderItems() {
+                const container = document.getElementById('items-container');
+                
+                if (this.items.length === 0) {
+                    container.innerHTML = '<div class="empty-state">Your garden is waiting for its first seed...</div>';
+                    return;
+                }
+
+                container.innerHTML = this.items.map(item => `
+                    <div class="item">
+                        <div class="item-header">
+                            <span class="item-type">${item.type}</span>
+                            <span class="item-date">${item.planted}</span>
+                        </div>
+                        <div class="item-title">${item.title}</div>
+                        <div class="item-description">${item.description}</div>
+                        ${item.url ? `<div style="margin-top: 8px;"><a href="${item.url}" target="_blank" style="color: #8bc34a; text-decoration: none; font-size: 0.9rem;">→ visit source</a></div>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            updateStats() {
+                const total = this.items.length;
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                
+                const thisWeek = this.items.filter(item => 
+                    new Date(item.date) > weekAgo
+                ).length;
+
+                document.getElementById('total-items').textContent = total;
+                document.getElementById('this-week-items').textContent = thisWeek;
+            }
+
+            generateConnections() {
+                const container = document.getElementById('connections-container');
+                
+                if (this.items.length < 2) {
+                    container.innerHTML = '<div class="empty-state">Plant more seeds to discover connections...</div>';
+                    return;
+                }
+
+                const connections = this.findConnections();
+                
+                container.innerHTML = connections.map(connection => `
+                    <div class="connection">
+                        <div class="connection-title">${connection.title}</div>
+                        <div>${connection.description}</div>
+                    </div>
+                `).join('');
+            }
+
+            findConnections() {
+                const connections = [];
+                const types = [...new Set(this.items.map(item => item.type))];
+                const recentItems = this.items.slice(0, 5);
+                
+                if (types.length > 1) {
+                    connections.push({
+                        title: `Cross-pollination across ${types.join(', ')}`,
+                        description: `You've been collecting diverse types of ideas. How might these different formats complement each other?`
+                    });
+                }
+
+                if (recentItems.length >= 3) {
+                    const themes = this.extractThemes(recentItems);
+                    if (themes.length > 0) {
+                        connections.push({
+                            title: `Emerging patterns`,
+                            description: `Your recent seeds touch on themes around ${themes.join(', ')}. What larger question might you be exploring?`
+                        });
+                    }
+                }
+
+                const monthAgo = new Date();
+                monthAgo.setMonth(monthAgo.getMonth() - 1);
+                const oldItems = this.items.filter(item => new Date(item.date) < monthAgo);
+                
+                if (oldItems.length > 0) {
+                    connections.push({
+                        title: `Seeds ready for harvest`,
+                        description: `You have ${oldItems.length} ideas that have been growing for over a month. What insights have they developed?`
+                    });
+                }
+
+                return connections.length > 0 ? connections : [{
+                    title: 'Reflection opportunity',
+                    description: 'Look at your recent seeds. What drew you to each one? What questions are you unconsciously exploring?'
+                }];
+            }
+
+            extractThemes(items) {
+                const words = items.flatMap(item => 
+                    (item.title + ' ' + item.description)
+                    .toLowerCase()
+                    .split(/\W+/)
+                    .filter(word => word.length > 4)
+                );
+                
+                const frequency = {};
+                words.forEach(word => {
+                    frequency[word] = (frequency[word] || 0) + 1;
+                });
+                
+                return Object.entries(frequency)
+                    .filter(([word, count]) => count > 1)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 3)
+                    .map(([word]) => word);
+            }
+
+            exportGarden() {
+                const insights = {
+                    exported: new Date().toLocaleDateString(),
+                    totalSeeds: this.items.length,
+                    garden: this.items,
+                    reflection: 'What patterns do you notice across your collected ideas? What themes keep drawing your attention?'
+                };
+                
+                const dataStr = JSON.stringify(insights, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `garden-harvest-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+            }
+        }
+
+        function showView(view) {
+            document.getElementById('garden-view').classList.toggle('hidden', view !== 'garden');
+            document.getElementById('ritual-view').classList.toggle('hidden', view !== 'ritual');
+        }
+
+        // Initialize the garden
+        const garden = new DigitalGarden();
+
+        // Global functions for buttons
+        window.showView = showView;
+        window.exportGarden = () => garden.exportGarden();
+        window.generateConnections = () => garden.generateConnections();
+    </script>
+</body>
+</html>
