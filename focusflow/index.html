@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusFlow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Crimson Text', serif;
+            background: #1a1a17;
+            color: #e8e6e0;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 108, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(120, 119, 108, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(120, 119, 108, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 80px 40px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #f4f2eb;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .tagline {
+            font-size: 1.1rem;
+            color: #a8a599;
+            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .session-container {
+            background: rgba(40, 38, 32, 0.6);
+            border: 1px solid rgba(120, 119, 108, 0.2);
+            border-radius: 2px;
+            padding: 60px 40px;
+            margin-bottom: 60px;
+            backdrop-filter: blur(10px);
+        }
+
+        .intention-section {
+            margin-bottom: 50px;
+        }
+
+        .section-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #c4c1b7;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+        }
+
+        .intention-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(120, 119, 108, 0.3);
+            color: #f4f2eb;
+            font-family: 'Crimson Text', serif;
+            font-size: 1.3rem;
+            padding: 12px 0;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .intention-input:focus {
+            border-bottom-color: #c4c1b7;
+        }
+
+        .intention-input::placeholder {
+            color: rgba(164, 161, 153, 0.6);
+            font-style: italic;
+        }
+
+        .timer-section {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .timer-display {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 4rem;
+            font-weight: 400;
+            color: #f4f2eb;
+            margin: 30px 0;
+            letter-spacing: -0.02em;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .time-inputs {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .time-input {
+            background: transparent;
+            border: 1px solid rgba(120, 119, 108, 0.3);
+            border-radius: 2px;
+            color: #f4f2eb;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            padding: 8px 12px;
+            width: 60px;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .time-input:focus {
+            border-color: #c4c1b7;
+        }
+
+        .time-label {
+            font-size: 0.8rem;
+            color: #a8a599;
+            margin-top: 4px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .btn {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 12px 24px;
+            border: 1px solid rgba(120, 119, 108, 0.4);
+            background: transparent;
+            color: #f4f2eb;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.02em;
+            border-radius: 2px;
+        }
+
+        .btn:hover {
+            background: rgba(120, 119, 108, 0.1);
+            border-color: #c4c1b7;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn.primary {
+            background: #f4f2eb;
+            color: #1a1a17;
+            border-color: #f4f2eb;
+        }
+
+        .btn.primary:hover {
+            background: #e8e6e0;
+        }
+
+        .breathing-indicator {
+            text-align: center;
+            margin-top: 40px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .breathing-indicator.active {
+            opacity: 1;
+        }
+
+        .breath-circle {
+            width: 60px;
+            height: 60px;
+            border: 2px solid rgba(196, 193, 183, 0.3);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .breath-fill {
+            width: 100%;
+            height: 100%;
+            background: rgba(196, 193, 183, 0.2);
+            border-radius: 50%;
+            transform: scale(0);
+            transition: transform 4s ease-in-out;
+        }
+
+        .breath-fill.inhale {
+            transform: scale(1);
+        }
+
+        .breath-text {
+            font-size: 0.9rem;
+            color: #a8a599;
+            font-style: italic;
+        }
+
+        .session-complete {
+            text-align: center;
+            padding: 40px 0;
+            display: none;
+        }
+
+        .session-complete.show {
+            display: block;
+        }
+
+        .complete-message {
+            font-size: 1.4rem;
+            color: #f4f2eb;
+            margin-bottom: 20px;
+        }
+
+        .complete-subtext {
+            color: #a8a599;
+            font-style: italic;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 60px 20px;
+            }
+
+            .session-container {
+                padding: 40px 24px;
+            }
+
+            .timer-display {
+                font-size: 3rem;
+            }
+
+            .logo {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="logo">FocusFlow</h1>
+            <p class="tagline">Sometimes limitations create<br>better experiences than infinite options</p>
+        </div>
+
+        <div class="session-container">
+            <div class="intention-section">
+                <div class="section-label">Single Intention</div>
+                <input type="text" class="intention-input" id="intentionInput" placeholder="What will you focus on?" maxlength="80">
+            </div>
+
+            <div class="timer-section">
+                <div class="section-label">Time Boundary</div>
+                
+                <div class="time-inputs" id="timeInputs">
+                    <div>
+                        <input type="number" class="time-input" id="minutes" value="25" min="1" max="99">
+                        <div class="time-label">MIN</div>
+                    </div>
+                    <div>
+                        <input type="number" class="time-input" id="seconds" value="0" min="0" max="59">
+                        <div class="time-label">SEC</div>
+                    </div>
+                </div>
+
+                <div class="timer-display" id="timerDisplay">25:00</div>
+
+                <div class="controls">
+                    <button class="btn primary" id="startBtn">Begin</button>
+                    <button class="btn" id="pauseBtn" disabled>Pause</button>
+                    <button class="btn" id="resetBtn">Reset</button>
+                </div>
+            </div>
+
+            <div class="breathing-indicator" id="breathingIndicator">
+                <div class="breath-circle">
+                    <div class="breath-fill" id="breathFill"></div>
+                </div>
+                <div class="breath-text" id="breathText">Breathe in...</div>
+            </div>
+
+            <div class="session-complete" id="sessionComplete">
+                <div class="complete-message">Session complete</div>
+                <div class="complete-subtext">Well done. Take a moment to reflect.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class FocusFlow {
+            constructor() {
+                this.timer = null;
+                this.breathingTimer = null;
+                this.timeRemaining = 0;
+                this.isRunning = false;
+                this.isPaused = false;
+                this.breathingState = 'inhale';
+                
+                this.initElements();
+                this.bindEvents();
+                this.updateDisplay();
+            }
+
+            initElements() {
+                this.intentionInput = document.getElementById('intentionInput');
+                this.minutesInput = document.getElementById('minutes');
+                this.secondsInput = document.getElementById('seconds');
+                this.timerDisplay = document.getElementById('timerDisplay');
+                this.startBtn = document.getElementById('startBtn');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.timeInputs = document.getElementById('timeInputs');
+                this.breathingIndicator = document.getElementById('breathingIndicator');
+                this.breathFill = document.getElementById('breathFill');
+                this.breathText = document.getElementById('breathText');
+                this.sessionComplete = document.getElementById('sessionComplete');
+            }
+
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.start());
+                this.pauseBtn.addEventListener('click', () => this.pause());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                
+                this.minutesInput.addEventListener('input', () => this.updateDisplay());
+                this.secondsInput.addEventListener('input', () => this.updateDisplay());
+
+                // Vibration API for breathing reminders (if available)
+                this.supportsVibration = 'vibrator' in navigator || 'vibrate' in navigator;
+            }
+
+            updateDisplay() {
+                if (!this.isRunning) {
+                    const minutes = parseInt(this.minutesInput.value) || 0;
+                    const seconds = parseInt(this.secondsInput.value) || 0;
+                    this.timeRemaining = minutes * 60 + seconds;
+                }
+                
+                const displayMinutes = Math.floor(this.timeRemaining / 60);
+                const displaySeconds = this.timeRemaining % 60;
+                this.timerDisplay.textContent = `${displayMinutes}:${displaySeconds.toString().padStart(2, '0')}`;
+            }
+
+            start() {
+                if (!this.isPaused) {
+                    const minutes = parseInt(this.minutesInput.value) || 0;
+                    const seconds = parseInt(this.secondsInput.value) || 0;
+                    this.timeRemaining = minutes * 60 + seconds;
+                    
+                    if (this.timeRemaining === 0) return;
+                }
+
+                this.isRunning = true;
+                this.isPaused = false;
+                
+                this.startBtn.disabled = true;
+                this.pauseBtn.disabled = false;
+                this.timeInputs.style.display = 'none';
+                this.sessionComplete.classList.remove('show');
+                
+                this.timer = setInterval(() => {
+                    this.timeRemaining--;
+                    this.updateDisplay();
+                    
+                    if (this.timeRemaining === 0) {
+                        this.complete();
+                    }
+                }, 1000);
+
+                this.startBreathing();
+            }
+
+            pause() {
+                this.isRunning = false;
+                this.isPaused = true;
+                
+                clearInterval(this.timer);
+                clearInterval(this.breathingTimer);
+                
+                this.startBtn.disabled = false;
+                this.startBtn.textContent = 'Resume';
+                this.pauseBtn.disabled = true;
+                
+                this.breathingIndicator.classList.remove('active');
+            }
+
+            reset() {
+                this.isRunning = false;
+                this.isPaused = false;
+                
+                clearInterval(this.timer);
+                clearInterval(this.breathingTimer);
+                
+                this.startBtn.disabled = false;
+                this.startBtn.textContent = 'Begin';
+                this.pauseBtn.disabled = true;
+                this.timeInputs.style.display = 'flex';
+                
+                this.breathingIndicator.classList.remove('active');
+                this.sessionComplete.classList.remove('show');
+                
+                this.updateDisplay();
+            }
+
+            complete() {
+                this.isRunning = false;
+                
+                clearInterval(this.timer);
+                clearInterval(this.breathingTimer);
+                
+                this.startBtn.disabled = false;
+                this.startBtn.textContent = 'Begin';
+                this.pauseBtn.disabled = true;
+                this.timeInputs.style.display = 'flex';
+                
+                this.breathingIndicator.classList.remove('active');
+                this.sessionComplete.classList.add('show');
+                
+                // Final vibration for completion
+                if (this.supportsVibration) {
+                    navigator.vibrate([200, 100, 200, 100, 200]);
+                }
+
+                this.updateDisplay();
+            }
+
+            startBreathing() {
+                this.breathingIndicator.classList.add('active');
+                
+                const breatheCycle = () => {
+                    if (this.breathingState === 'inhale') {
+                        this.breathFill.classList.add('inhale');
+                        this.breathText.textContent = 'Breathe in...';
+                        this.breathingState = 'exhale';
+                        
+                        if (this.supportsVibration) {
+                            navigator.vibrate(100);
+                        }
+                    } else {
+                        this.breathFill.classList.remove('inhale');
+                        this.breathText.textContent = 'Breathe out...';
+                        this.breathingState = 'inhale';
+                        
+                        if (this.supportsVibration) {
+                            navigator.vibrate(100);
+                        }
+                    }
+                };
+                
+                breatheCycle();
+                this.breathingTimer = setInterval(breatheCycle, 4000);
+            }
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            new FocusFlow();
+        });
+    </script>
+</body>
+</html>
