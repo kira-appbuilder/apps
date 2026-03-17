@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhisperSpace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+3:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            font-weight: 300;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #e8e6e3;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 1px 1px, rgba(255,255,255,0.02) 1px, transparent 0);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 80px 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .title {
+            font-family: 'Crimson Text', serif;
+            font-size: 3.5rem;
+            font-weight: 400;
+            color: #f5f3f0;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #a8a5a0;
+            font-weight: 300;
+            line-height: 1.5;
+        }
+
+        .whisper-form {
+            background: rgba(40, 40, 40, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 2px;
+            padding: 40px;
+            margin-bottom: 60px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .whisper-textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            font-family: 'Crimson Text', serif;
+            font-size: 1.3rem;
+            color: #f5f3f0;
+            line-height: 1.6;
+            resize: none;
+            height: 120px;
+            outline: none;
+            font-style: italic;
+        }
+
+        .whisper-textarea::placeholder {
+            color: #6b6860;
+            font-style: italic;
+        }
+
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .sentence-counter {
+            font-size: 0.9rem;
+            color: #8a8680;
+        }
+
+        .sentence-counter.warning {
+            color: #d4a574;
+        }
+
+        .whisper-btn {
+            background: #4a4840;
+            color: #f5f3f0;
+            border: none;
+            padding: 12px 24px;
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 400;
+            cursor: pointer;
+            border-radius: 1px;
+            transition: all 0.2s ease;
+            letter-spacing: 0.02em;
+        }
+
+        .whisper-btn:hover {
+            background: #5a5548;
+            transform: translateY(-1px);
+        }
+
+        .whisper-btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .whispers-list {
+            space-y: 24px;
+        }
+
+        .whisper-item {
+            background: rgba(30, 30, 30, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 1px;
+            padding: 32px;
+            margin-bottom: 24px;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        .whisper-content {
+            font-family: 'Crimson Text', serif;
+            font-size: 1.2rem;
+            line-height: 1.65;
+            color: #e8e6e3;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .whisper-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #8a8680;
+        }
+
+        .keep-btn {
+            background: transparent;
+            color: #a8a5a0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-radius: 1px;
+            transition: all 0.2s ease;
+            font-family: 'Source Sans 3', sans-serif;
+        }
+
+        .keep-btn:hover {
+            color: #f5f3f0;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .keep-btn.kept {
+            color: #d4a574;
+            border-color: #d4a574;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #6b6860;
+            font-style: italic;
+            margin: 80px 0;
+            font-family: 'Crimson Text', serif;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 24px;
+            }
+            
+            .title {
+                font-size: 2.5rem;
+            }
+            
+            .whisper-form {
+                padding: 24px;
+            }
+            
+            .form-footer {
+                flex-direction: column;
+                gap: 16px;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">WhisperSpace</h1>
+            <p class="subtitle">A private sanctuary for your thoughts. Three sentences, your truth, encrypted locally.</p>
+        </div>
+
+        <div class="whisper-form">
+            <textarea 
+                class="whisper-textarea" 
+                placeholder="What's weighing on your mind today? Speak freely here..."
+                maxlength="500"></textarea>
+            <div class="form-footer">
+                <span class="sentence-counter">0 sentences</span>
+                <button class="whisper-btn" onclick="saveWhisper()">Whisper</button>
+            </div>
+        </div>
+
+        <div class="whispers-list" id="whispersList">
+            <div class="empty-state" id="emptyState">
+                Your whispers will appear here, safe and private...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple encryption/decryption functions
+        function simpleEncrypt(text) {
+            return btoa(unescape(encodeURIComponent(text)));
+        }
+
+        function simpleDecrypt(encrypted) {
+            try {
+                return decodeURIComponent(escape(atob(encrypted)));
+            } catch (e) {
+                return encrypted;
+            }
+        }
+
+        function countSentences(text) {
+            if (!text.trim()) return 0;
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            return sentences.length;
+        }
+
+        function updateSentenceCounter() {
+            const textarea = document.querySelector('.whisper-textarea');
+            const counter = document.querySelector('.sentence-counter');
+            const btn = document.querySelector('.whisper-btn');
+            
+            const count = countSentences(textarea.value);
+            counter.textContent = `${count} sentence${count !== 1 ? 's' : ''}`;
+            
+            if (count > 3) {
+                counter.classList.add('warning');
+                btn.disabled = true;
+            } else {
+                counter.classList.remove('warning');
+                btn.disabled = count === 0;
+            }
+        }
+
+        function saveWhisper() {
+            const textarea = document.querySelector('.whisper-textarea');
+            const text = textarea.value.trim();
+            
+            if (!text) return;
+            
+            const whisper = {
+                id: Date.now().toString(),
+                content: simpleEncrypt(text),
+                timestamp: new Date().toISOString(),
+                kept: false
+            };
+            
+            const whispers = getWhispers();
+            whispers.unshift(whisper);
+            localStorage.setItem('whispers', JSON.stringify(whispers));
+            
+            textarea.value = '';
+            updateSentenceCounter();
+            renderWhispers();
+        }
+
+        function getWhispers() {
+            const stored = localStorage.getItem('whispers');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function toggleKeep(id) {
+            const whispers = getWhispers();
+            const whisper = whispers.find(w => w.id === id);
+            if (whisper) {
+                whisper.kept = !whisper.kept;
+                localStorage.setItem('whispers', JSON.stringify(whispers));
+                renderWhispers();
+            }
+        }
+
+        function formatTimeAgo(timestamp) {
+            const now = new Date();
+            const past = new Date(timestamp);
+            const diffInSeconds = Math.floor((now - past) / 1000);
+            
+            if (diffInSeconds < 60) return 'just now';
+            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            return `${Math.floor(diffInSeconds / 86400)}d ago`;
+        }
+
+        function getDaysUntilDeletion(timestamp) {
+            const created = new Date(timestamp);
+            const deletion = new Date(created.getTime() + 30 * 24 * 60 * 60 * 1000);
+            const now = new Date();
+            const diffInDays = Math.ceil((deletion - now) / (24 * 60 * 60 * 1000));
+            return Math.max(0, diffInDays);
+        }
+
+        function cleanExpiredWhispers() {
+            const whispers = getWhispers();
+            const now = new Date();
+            const filtered = whispers.filter(whisper => {
+                if (whisper.kept) return true;
+                const created = new Date(whisper.timestamp);
+                const daysSince = (now - created) / (24 * 60 * 60 * 1000);
+                return daysSince < 30;
+            });
+            
+            if (filtered.length !== whispers.length) {
+                localStorage.setItem('whispers', JSON.stringify(filtered));
+            }
+            
+            return filtered;
+        }
+
+        function renderWhispers() {
+            const whispers = cleanExpiredWhispers();
+            const container = document.getElementById('whispersList');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (whispers.length === 0) {
+                emptyState.style.display = 'block';
+                container.innerHTML = '<div class="empty-state" id="emptyState">Your whispers will appear here, safe and private...</div>';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            container.innerHTML = whispers.map(whisper => {
+                const content = simpleDecrypt(whisper.content);
+                const timeAgo = formatTimeAgo(whisper.timestamp);
+                const daysLeft = getDaysUntilDeletion(whisper.timestamp);
+                
+                return `
+                    <div class="whisper-item">
+                        <div class="whisper-content">${content}</div>
+                        <div class="whisper-meta">
+                            <span>${timeAgo} • ${whisper.kept ? 'kept forever' : `${daysLeft} days left`}</span>
+                            <button class="keep-btn ${whisper.kept ? 'kept' : ''}" onclick="toggleKeep('${whisper.id}')">
+                                ${whisper.kept ? 'kept' : 'keep'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Event listeners
+        document.querySelector('.whisper-textarea').addEventListener('input', updateSentenceCounter);
+        document.querySelector('.whisper-textarea').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                saveWhisper();
+            }
+        });
+
+        // Initialize
+        updateSentenceCounter();
+        renderWhispers();
+        
+        // Clean up expired whispers every hour
+        setInterval(cleanExpiredWhispers, 60 * 60 * 1000);
+    </script>
+</body>
+</html>
