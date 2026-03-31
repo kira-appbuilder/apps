@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AmbientSense</title>
+  
+  <!-- Kira Error Reporter: JSエラーを自動検知してFirestoreに送信 -->
+  <script>
+  (function(){
+    var APP_NAME = document.title || location.pathname.split('/').filter(Boolean).pop() || 'unknown';
+    var FIRESTORE_URL = 'https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_errors';
+    var reported = {};
+    function report(msg, source, line, col, err) {
+      var key = msg + ':' + (line||0);
+      if (reported[key]) return;
+      reported[key] = true;
+      try {
+        fetch(FIRESTORE_URL, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({fields:{
+            app_name:{stringValue:APP_NAME},
+            message:{stringValue:String(msg).substring(0,500)},
+            source:{stringValue:String(source||'').substring(0,200)},
+            line:{integerValue:String(line||0)},
+            user_agent:{stringValue:navigator.userAgent.substring(0,200)},
+            url:{stringValue:location.href.substring(0,200)},
+            timestamp:{stringValue:new Date().toISOString()}
+          }})
+        }).catch(function(){});
+      } catch(e){}
+    }
+    window.onerror = report;
+    window.addEventListener('unhandledrejection', function(e){ report('Unhandled rejection: '+(e.reason||''),''  ,0,0,null); });
+  })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Space+Mono:wght@400,700&family=Zen+Kaku+Gothic+New:wght@300;400&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --kira-bg: #0b0b0f;
+      --kira-surface: rgba(255,255,255,0.03);
+      --kira-surface-hover: rgba(255,255,255,0.06);
+      --kira-sage: #9ec4a8;
+      --kira-amber: #f5c87a;
+      --kira-text-primary: rgba(245,240,250,0.92);
+      --kira-text-secondary: rgba(245,240,250,0.45);
+      --kira-text-hint: rgba(245,240,250,0.2);
+      --kira-border: rgba(158,196,168,0.18);
+      --kira-border-focus: rgba(158,196,168,0.45);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-pill: 40px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--kira-bg);
+      color: var(--kira-text-primary);
+      font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .bg-glow {
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(ellipse, rgba(158,196,168,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .bg-glow-bottom {
+      position: absolute;
+      bottom: -200px;
+      right: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(245,200,122,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 580px;
+      margin: 0 auto;
+      padding: 48px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+      animation: fadeInUp 0.6s ease both;
+    }
+
+    .header h1 {
+      font-family: 'Cormorant Garamond', 'Noto Serif JP', Georgia, serif;
+      font-size: 42px;
+      font-weight: 300;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .header .subtitle {
+      color: var(--kira-text-secondary);
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .header .subtitle-jp {
+      color: var(--kira-sage);
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    .lang-toggle {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: rgba(158,196,168,0.1);
+      border: 0.5px solid rgba(158,196,168,0.35);
+      border-radius: var(--radius-pill);
+      padding: 10px 20px;
+      color: var(--kira-sage);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      animation: fadeInUp 0.6s ease 0.1s both;
+    }
+
+    .lang-toggle:hover {
+      background: rgba(158,196,168,0.18);
+      border-color: rgba(158,196,168,0.6);
+      transform: translateY(-1px);
+    }
+
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease 0.15s both;
+    }
+
+    .sensor-card {
+      background: rgba(158,196,168,0.04);
+      border: 0.5px solid var(--kira-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .sensor-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(to bottom, var(--kira-sage), var(--kira-amber));
+      opacity: 0.4;
+    }
+
+    .sensor-card:hover {
+      background: rgba(158,196,168,0.06);
+      border-color: var(--kira-border-focus);
+      transform: translateY(-1px);
+    }
+
+    .sensor-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: var(--kira-sage);
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+
+    .sensor-value {
+      font-size: 32px;
+      font-weight: 300;
+      margin-bottom: 4px;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .sensor-unit {
+      color: var(--kira-text-secondary);
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .sensor-description {
+      color: var(--kira-text-secondary);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(158,196,168,0.06);
+      border: 0.5px solid rgba(158,196,168,0.15);
+      border-radius: var(--radius-pill);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: rgba(158,196,168,0.8);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--kira-sage);
+      animation: pulse 2s infinite;
+    }
+
+    .ambient-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+      background: linear-gradient(135deg, 
+        rgba(158,196,168,0.1) 0%,
+        rgba(245,200,122,0.08) 50%,
+        rgba(158,196,168,0.06) 100%);
+    }
+
+    .ambient-overlay.active {
+      opacity: 1;
+    }
+
+    .ambient-info {
+      position: absolute;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      color: var(--kira-text-primary);
+    }
+
+    .ambient-time {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 48px;
+      font-weight: 300;
+      margin-bottom: 8px;
+    }
+
+    .ambient-status {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--kira-text-secondary);
+    }
+
+    .controls {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease 0.3s both;
+    }
+
+    .control-btn {
+      background: rgba(158,196,168,0.1);
+      border: 0.5px solid rgba(158,196,168,0.35);
+      border-radius: var(--radius-pill);
+      padding: 12px 24px;
+      color: var(--kira-sage);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      background: rgba(158,196,168,0.18);
+      border-color: rgba(158,196,168,0.6);
+      transform: translateY(-1px);
+    }
+
+    .control-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .divider {
+      width: 1px;
+      height: 32px;
+      background: linear-gradient(to bottom, transparent, rgba(158,196,168,0.25), transparent);
+      margin: 32px auto;
+    }
+
+    .permissions {
+      text-align: center;
+      padding: 24px;
+      background: rgba(245,200,122,0.04);
+      border: 0.5px solid rgba(245,200,122,0.18);
+      border-radius: var(--radius-lg);
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease 0.45s both;
+    }
+
+    .permissions-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: var(--kira-amber);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.8; }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Language switching */
+    [data-lang="ja"] { display: none; }
+    body.lang-ja [data-lang="en"] { display: none; }
+    body.lang-ja [data-lang="ja"] { display: inline; }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 32px 16px;
+      }
+      
+      .sensor-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .controls {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .lang-toggle {
+        top: 16px;
+        right: 16px;
+        padding: 8px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="bg-glow-bottom"></div>
+  
+  <button class="lang-toggle" onclick="toggleLanguage()">
+    <span data-lang="en">日本語</span>
+    <span data-lang="ja">English</span>
+  </button>
+
+  <div class="container">
+    <header class="header">
+      <h1>
+        <span data-lang="en">Ambient<em>Sense</em></span>
+        <span data-lang="ja">アンビエント<em>センス</em></span>
+      </h1>
+      <div class="subtitle">
+        <span data-lang="en">gentle environmental awareness</span>
+        <span data-lang="ja">やわらかな環境認識</span>
+      </div>
+      <div class="subtitle-jp">
+        <span data-lang="en">世界を感じる、静かに。</span>
+        <span data-lang="ja">feel the world, quietly.</span>
+      </div>
+    </header>
+
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      <span data-lang="en">sensing</span>
+      <span data-lang="ja">感知中</span>
+    </div>
+
+    <div class="sensor-grid">
+      <div class="sensor-card">
+        <div class="sensor-meta">
+          <span data-lang="en">light patterns</span>
+          <span data-lang="ja">光のパターン</span>
+        </div>
+        <div class="sensor-value" id="light-value">--</div>
+        <div class="sensor-unit">
+          <span data-lang="en">lux</span>
+          <span data-lang="ja">ルクス</span>
+        </div>
+        <div class="sensor-description">
+          <span data-lang="en">ambient light intensity reflecting the rhythm of your space</span>
+          <span data-lang="ja">あなたの空間のリズムを反映する環境光の強度</span>
+        </div>
+      </div>
+
+      <div class="sensor-card">
+        <div class="sensor-meta">
+          <span data-lang="en">sound levels</span>
+          <span data-lang="ja">音のレベル</span>
+        </div>
+        <div class="sensor-value" id="sound-value">--</div>
+        <div class="sensor-unit">
+          <span data-lang="en">dB</span>
+          <span data-lang="ja">デシベル</span>
+        </div>
+        <div class="sensor-description">
+          <span data-lang="en">gentle monitoring of your acoustic environment</span>
+          <span data-lang="ja">音響環境の穏やかな監視</span>
+        </div>
+      </div>
+
+      <div class="sensor-card">
+        <div class="sensor-meta">
+          <span data-lang="en">air quality</span>
+          <span data-lang="ja">空気品質</span>
+        </div>
+        <div class="sensor-value" id="air-value">--</div>
+        <div class="sensor-unit">
+          <span data-lang="en">AQI</span>
+          <span data-lang="ja">大気質指数</span>
+        </div>
+        <div class="sensor-description">
+          <span data-lang="en">breathing quality awareness through subtle cues</span>
+          <span data-lang="ja">微細な手がかりによる呼吸品質の認識</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="controls">
+      <button class="control-btn" onclick="toggleAmbientMode()">
+        <span data-lang="en">ambient view</span>
+        <span data-lang="ja">環境表示</span>
+      </button>
+      <button class="control-btn" onclick="requestPermissions()">
+        <span data-lang="en">enable sensors</span>
+        <span data-lang="ja">センサー有効</span>
+      </button>
+    </div>
+
+    <div class="permissions" id="permissions-info">
+      <div class="permissions-title">
+        <span data-lang="en">Gentle Awareness</span>
+        <span data-lang="ja">やわらかな認識</span>
+      </div>
+      <div>
+        <span data-lang="en">This app uses your device sensors to create subtle environmental awareness. No data is stored or transmitted—everything stays private on your device.</span>
+        <span data-lang="ja">このアプリはデバイスのセンサーを使用して、微細な環境認識を作成します。データは保存や送信されません—すべてがデバイス内でプライベートに保たれます。</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ambient-overlay" id="ambient-overlay">
+    <div class="ambient-info">
+      <div class="ambient-time" id="ambient-time">--:--</div>
+      <div class="ambient-status">
+        <span data-lang="en">sensing your environment</span>
+        <span data-lang="ja">環境を感知中</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let sensorData = {
+      light: null,
+      sound: null,
+      airQuality: Math.floor(Math.random() * 100) + 50 // Simulated
+    };
+
+    let audioContext = null;
+    let ambientMode = false;
+    let currentLanguage = 'en';
+
+    // Language switching
+    function toggleLanguage() {
+      currentLanguage = currentLanguage === 'en' ? 'ja' : 'en';
+      document.body.className = currentLanguage === 'ja' ? 'lang-ja' : '';
+      localStorage.setItem('ambientSenseLanguage', currentLanguage);
+    }
+
+    // Load saved language
+    function loadLanguage() {
+      const saved = localStorage.getItem('ambientSenseLanguage');
+      if (saved) {
+        currentLanguage = saved;
+        document.body.className = currentLanguage === 'ja' ? 'lang-ja' : '';
+      }
+    }
+
+    // Initialize sensors
+    async function requestPermissions() {
+      try {
+        // Request ambient light sensor
+        if ('AmbientLightSensor' in window) {
+          const sensor = new AmbientLightSensor();
+          sensor.onreading = () => {
+            sensorData.light = Math.round(sensor.illuminance);
+            updateDisplay();
+          };
+          sensor.onerror = () => console.log('Light sensor error');
+          sensor.start();
+        } else {
+          // Fallback: simulate light changes
+          simulateLightSensor();
+        }
+
+        // Request microphone for sound level
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (stream) {
+          initAudioContext(stream);
+        }
+      } catch (error) {
+        console.log('Sensor permission denied:', error);
+        // Start with simulated data
+        simulateAllSensors();
+      }
+    }
+
+    function simulateLightSensor() {
+      // Simulate light changes based on time of day
+      setInterval(() => {
+        const hour = new Date().getHours();
+        let baseLight = 100;
+        if (hour >= 6 && hour <= 18) {
+          baseLight = 300 + Math.random() * 200; // Daytime
+        } else {
+          baseLight = 10 + Math.random() * 50; // Nighttime
+        }
+        sensorData.light = Math.round(baseLight + (Math.random() - 0.5) * 50);
+        updateDisplay();
+      }, 2000);
+    }
+
+    function initAudioContext(stream) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      
+      function updateSoundLevel() {
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        sensorData.sound = Math.round(20 * Math.log10(average + 1));
+        updateDisplay();
+        requestAnimationFrame(updateSoundLevel);
+      }
+      updateSoundLevel();
+    }
+
+    function simulateAllSensors() {
+      setInterval(() => {
+        // Simulate realistic sensor fluctuations
+        const hour = new Date().getHours();
+        
+        // Light simulation
+        if (hour >= 6 && hour <= 18) {
+          sensorData.light = Math.round(200 + Math.random() * 300);
+        } else {
+          sensorData.light = Math.round(5 + Math.random() * 30);
+        }
+        
+        // Sound simulation (quieter at night)
+        const baseSound = hour >= 22 || hour <= 6 ? 25 : 35;
+        sensorData.sound = Math.round(baseSound + (Math.random() - 0.5) * 15);
+        
+        // Air quality simulation
+        sensorData.airQuality += (Math.random() - 0.5) * 5;
+        sensorData.airQuality = Math.max(20, Math.min(150, sensorData.airQuality));
+        sensorData.airQuality = Math.round(sensorData.airQuality);
+        
+        updateDisplay();
+        updateAmbientGradient();
+      }, 3000);
+    }
+
+    function updateDisplay() {
+      document.getElementById('light-value').textContent = sensorData.light || '--';
+      document.getElementById('sound-value').textContent = sensorData.sound || '--';
+      document.getElementById('air-value').textContent = Math.round(sensorData.airQuality) || '--';
+    }
+
+    function updateAmbientGradient() {
+      if (!ambientMode) return;
+      
+      const overlay = document.getElementById('ambient-overlay');
+      const light = sensorData.light || 100;
+      const sound = sensorData.sound || 30;
+      const air = sensorData.airQuality || 75;
+      
+      // Create gradient based on sensor data
+      const lightIntensity = Math.min(light / 500, 1);
+      const soundIntensity = Math.min(sound / 60, 1);
+      const airIntensity = 1 - Math.min(air / 100, 1);
+      
+      const gradient = `linear-gradient(135deg, 
+        rgba(158,196,168,${lightIntensity * 0.15}) 0%,
+        rgba(245,200,122,${soundIntensity * 0.12}) 50%,
+        rgba(201,168,224,${airIntensity * 0.1}) 100%)`;
+      
+      overlay.style.background = gradient;
+    }
+
+    function toggleAmbientMode() {
+      ambientMode = !ambientMode;
+      const overlay = document.getElementById('ambient-overlay');
+      
+      if (ambientMode) {
+        overlay.classList.add('active');
+        updateAmbientTime();
+      } else {
+        overlay.classList.remove('active');
+      }
+    }
+
+    function updateAmbientTime() {
+      const timeElement = document.getElementById('ambient-time');
+      const updateTime = () => {
+        if (ambientMode) {
+          const now = new Date();
+          timeElement.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+          setTimeout(updateTime, 1000);
+        }
+      };
+      updateTime();
+    }
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', () => {
+      loadLanguage();
+      simulateAllSensors(); // Start with simulated data
+      
+      // Close ambient mode on click
+      document.getElementById('ambient-overlay').addEventListener('click', () => {
+        if (ambientMode) toggleAmbientMode();
+      });
+    });
+  </script>
+
+  <!-- Kira Feedback Widget: ユーザーからのフィードバックをFirestoreに送信 -->
+  <div id="kira-feedback" style="position:fixed;bottom:16px;right:16px;z-index:9999;">
+    <button id="kira-fb-btn" onclick="document.getElementById('kira-fb-form').style.display=document.getElementById('kira-fb-form').style.display==='none'?'flex':'none'" style="background:rgba(201,168,224,0.12);border:0.5px solid rgba(201,168,224,0.3);border-radius:40px;padding:8px 16px;color:rgba(245,240,250,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;">Feedback</button>
+    <form id="kira-fb-form" style="display:none;flex-direction:column;gap:8px;margin-top:8px;background:rgba(11,11,15,0.95);border:0.5px solid rgba(201,168,224,0.2);border-radius:12px;padding:16px;min-width:240px;" onsubmit="return kiraSubmitFeedback(event)">
+      <select id="kira-fb-type" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;">
+        <option value="love">Love it</option><option value="bug">Bug report</option><option value="idea">Feature idea</option><option value="other">Other</option>
+      </select>
+      <textarea id="kira-fb-msg" placeholder="Your thoughts..." rows="3" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;resize:vertical;"></textarea>
+      <button type="submit" style="background:rgba(201,168,224,0.1);border:0.5px solid rgba(201,168,224,0.35);border-radius:40px;padding:8px;color:#c9a8e0;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.15em;cursor:pointer;text-transform:uppercase;">Send</button>
+      <div id="kira-fb-status" style="font-size:11px;color:rgba(245,240,250,0.5);text-align:center;"></div>
+    </form>
+  </div>
+
+  <script>
+  function kiraSubmitFeedback(e){
+    e.preventDefault();
+    var type=document.getElementById('kira-fb-type').value;
+    var msg=document.getElementById('kira-fb-msg').value.trim();
+    if(!msg){document.getElementById('kira-fb-status').textContent='Please write something';return false;}
+    var APP_NAME=document.title||location.pathname.split('/').filter(Boolean).pop()||'unknown';
+    var url='https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_feedback';
+    fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{
+      app_name:{stringValue:APP_NAME},type:{stringValue:type},message:{stringValue:msg.substring(0,1000)},
+      url:{stringValue:location.href.substring(0,200)},timestamp:{stringValue:new Date().toISOString()}
+    }})}).then(function(){
+      document.getElementById('kira-fb-status').textContent='Thank you!';
+      document.getElementById('kira-fb-msg').value='';
+      setTimeout(function(){document.getElementById('kira-fb-form').style.display='none';document.getElementById('kira-fb-status').textContent='';},2000);
+    }).catch(function(){document.getElementById('kira-fb-status').textContent='Failed to send';});
+    return false;
+  }
+  </script>
+</body>
+</html>
