@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LawBreath - Gentle Legal Document Companion</title>
+    
+    <!-- Kira Error Reporter -->
+    <script>
+    (function(){
+      var APP_NAME = document.title || location.pathname.split('/').filter(Boolean).pop() || 'unknown';
+      var FIRESTORE_URL = 'https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_errors';
+      var reported = {};
+      function report(msg, source, line, col, err) {
+        var key = msg + ':' + (line||0);
+        if (reported[key]) return;
+        reported[key] = true;
+        try {
+          fetch(FIRESTORE_URL, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({fields:{
+              app_name:{stringValue:APP_NAME},
+              message:{stringValue:String(msg).substring(0,500)},
+              source:{stringValue:String(source||'').substring(0,200)},
+              line:{integerValue:String(line||0)},
+              user_agent:{stringValue:navigator.userAgent.substring(0,200)},
+              url:{stringValue:location.href.substring(0,200)},
+              timestamp:{stringValue:new Date().toISOString()}
+            }})
+          }).catch(function(){});
+        } catch(e){}
+      }
+      window.onerror = report;
+      window.addEventListener('unhandledrejection', function(e){ report('Unhandled rejection: '+(e.reason||''),'',0,0,null); });
+    })();
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Space+Mono:wght@400&family=Zen+Kaku+Gothic+New:wght@300;400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --kira-bg: #0b0b0f;
+            --kira-surface: rgba(255,255,255,0.03);
+            --kira-surface-hover: rgba(255,255,255,0.06);
+            --kira-sage: #9ec4a8;
+            --kira-lavender: #c9a8e0;
+            --kira-text-primary: rgba(245,240,250,0.92);
+            --kira-text-secondary: rgba(245,240,250,0.45);
+            --kira-text-hint: rgba(245,240,250,0.2);
+            --kira-border: rgba(158, 196, 168, 0.18);
+            --kira-border-focus: rgba(158, 196, 168, 0.45);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-pill: 40px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: var(--kira-bg);
+            color: var(--kira-text-primary);
+            font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+            font-weight: 300;
+            line-height: 1.65;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        .background-glow {
+            position: absolute;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(158, 196, 168, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+            animation: fadeInUp 0.6s ease both;
+        }
+        
+        .lang-toggle {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(158, 196, 168, 0.1);
+            border: 0.5px solid rgba(158, 196, 168, 0.35);
+            border-radius: var(--radius-pill);
+            padding: 10px 28px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            color: var(--kira-sage);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .lang-toggle:hover {
+            background: rgba(158, 196, 168, 0.18);
+            border-color: rgba(158, 196, 168, 0.6);
+            transform: translateY(-1px);
+        }
+        
+        .title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 48px;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+        
+        .title .accent {
+            font-style: italic;
+            color: var(--kira-sage);
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            color: var(--kira-text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .subtitle-jp {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 15px;
+            color: var(--kira-text-hint);
+            letter-spacing: 0.05em;
+        }
+        
+        .main-card {
+            background: rgba(158, 196, 168, 0.04);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            margin-bottom: 32px;
+            animation: fadeInUp 0.6s ease 0.15s both;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        
+        .main-card:focus-within {
+            border-color: var(--kira-border-focus);
+            background: rgba(158, 196, 168, 0.06);
+        }
+        
+        .eyebrow {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.25em;
+            color: var(--kira-sage);
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-bottom: 16px;
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 48px 24px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--kira-border-focus);
+            background: rgba(158, 196, 168, 0.03);
+        }
+        
+        .upload-area.dragover {
+            border-color: var(--kira-sage);
+            background: rgba(158, 196, 168, 0.08);
+        }
+        
+        .upload-text {
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .upload-hint {
+            font-size: 14px;
+            color: var(--kira-text-secondary);
+            font-family: 'Space Mono', monospace;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        .textarea-input {
+            width: 100%;
+            min-height: 200px;
+            background: var(--kira-surface);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            color: var(--kira-text-primary);
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        .textarea-input:focus {
+            outline: none;
+            border-color: var(--kira-border-focus);
+        }
+        
+        .textarea-input::placeholder {
+            color: var(--kira-text-hint);
+        }
+        
+        .btn-primary {
+            background: rgba(158, 196, 168, 0.1);
+            border: 0.5px solid rgba(158, 196, 168, 0.35);
+            border-radius: var(--radius-pill);
+            padding: 14px 32px;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 0.15em;
+            color: var(--kira-sage);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 16px auto;
+            display: block;
+        }
+        
+        .btn-primary:hover {
+            background: rgba(158, 196, 168, 0.18);
+            border-color: rgba(158, 196, 168, 0.6);
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .processing {
+            text-align: center;
+            padding: 48px;
+            display: none;
+        }
+        
+        .wave-loader {
+            display: inline-flex;
+            gap: 4px;
+            margin: 24px 0;
+        }
+        
+        .wave-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--kira-sage);
+            border-radius: 50%;
+            animation: wave 1.4s ease-in-out infinite;
+        }
+        
+        .wave-dot:nth-child(2) { animation-delay: 0.1s; }
+        .wave-dot:nth-child(3) { animation-delay: 0.2s; }
+        .wave-dot:nth-child(4) { animation-delay: 0.3s; }
+        .wave-dot:nth-child(5) { animation-delay: 0.4s; }
+        
+        .analysis-section {
+            display: none;
+        }
+        
+        .section-card {
+            background: rgba(158, 196, 168, 0.04);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .section-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--kira-sage), var(--kira-lavender));
+            opacity: 0.4;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 20px;
+            font-weight: 300;
+        }
+        
+        .section-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(158, 196, 168, 0.06);
+            border: 0.5px solid rgba(158, 196, 168, 0.15);
+            border-radius: var(--radius-pill);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: rgba(158, 196, 168, 0.7);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        
+        .complexity-high {
+            background: rgba(240, 122, 106, 0.06);
+            border-color: rgba(240, 122, 106, 0.15);
+            color: rgba(240, 122, 106, 0.7);
+        }
+        
+        .original-text {
+            background: rgba(255, 255, 255, 0.02);
+            border: 0.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: var(--kira-text-secondary);
+            font-style: italic;
+        }
+        
+        .plain-language {
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+        
+        .key-points {
+            margin-bottom: 24px;
+        }
+        
+        .key-points h4 {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--kira-sage);
+            margin-bottom: 12px;
+        }
+        
+        .key-points ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .key-points li {
+            padding-left: 16px;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        
+        .key-points li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--kira-sage);
+        }
+        
+        .breathing-break {
+            text-align: center;
+            padding: 32px;
+            background: rgba(201, 168, 224, 0.04);
+            border: 0.5px solid rgba(201, 168, 224, 0.15);
+            border-radius: var(--radius-lg);
+            margin: 32px 0;
+            display: none;
+        }
+        
+        .breathing-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 16px;
+            color: var(--kira-lavender);
+        }
+        
+        .breathing-circle {
+            width: 120px;
+            height: 120px;
+            border: 2px solid var(--kira-lavender);
+            border-radius: 50%;
+            margin: 24px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            transition: transform 0.3s;
+        }
+        
+        .breathing-circle.inhale {
+            transform: scale(1.2);
+            background: rgba(201, 168, 224, 0.1);
+        }
+        
+        .breathing-circle.exhale {
+            transform: scale(0.8);
+        }
+        
+        .progress-container {
+            background: rgba(158, 196, 168, 0.04);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 32px;
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--kira-sage), var(--kira-lavender));
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 20px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+            animation: shimmer 2s infinite;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .divider {
+            width: 1px;
+            height: 32px;
+            background: linear-gradient(to bottom, transparent, rgba(158, 196, 168, 0.25), transparent);
+            margin: 32px auto;
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes wave {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.3;
+            }
+            30% {
+                transform: translateY(-12px);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        /* Language switching */
+        [data-lang="ja"] {
+            display: none;
+        }
+        
+        .lang-ja [data-lang="en"] {
+            display: none;
+        }
+        
+        .lang-ja [data-lang="ja"] {
+            display: inline;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-glow"></div>
+    
+    <button class="lang-toggle" onclick="toggleLanguage()">
+        <span data-lang="en">日本語</span>
+        <span data-lang="ja">English</span>
+    </button>
+    
+    <div class="container">
+        <header class="header">
+            <h1 class="title">
+                <span data-lang="en">Law<span class="accent">Breath</span></span>
+                <span data-lang="ja">法務<span class="accent">呼吸</span></span>
+            </h1>
+            <p class="subtitle">
+                <span data-lang="en">Gentle legal document companion</span>
+                <span data-lang="ja">やさしい法務文書のパートナー</span>
+            </p>
+            <p class="subtitle-jp">
+                <span data-lang="en">深呼吸で、法的文書を理解する。</span>
+                <span data-lang="ja">Deep breathing for legal understanding.</span>
+            </p>
+        </header>
+        
+        <div class="main-card" id="uploadCard">
+            <div class="eyebrow">
+                <span data-lang="en">step 01 — document input</span>
+                <span data-lang="ja">ステップ 01 — 文書入力</span>
+            </div>
+            
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <input type="file" id="fileInput" style="display: none" accept=".pdf,.txt,.doc,.docx">
+                <div class="upload-text">
+                    <span data-lang="en">Drop your legal document here</span>
+                    <span data-lang="ja">法務文書をここにドロップ</span>
+                </div>
+                <div class="upload-hint">
+                    <span data-lang="en">PDF • DOC • TXT</span>
+                    <span data-lang="ja">PDF • DOC • TXT</span>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin: 24px 0; color: var(--kira-text-hint);">
+                <span data-lang="en">or paste text below</span>
+                <span data-lang="ja">または下記にテキストを貼り付け</span>
+            </div>
+            
+            <textarea class="textarea-input" id="documentText" placeholder="Paste your legal document text here..." data-lang-placeholder-en="Paste your legal document text here..." data-lang-placeholder-ja="法務文書のテキストをここに貼り付けてください..."></textarea>
+            
+            <button class="btn-primary" onclick="startAnalysis()" id="analyzeBtn">
+                <span data-lang="en">Begin gentle analysis</span>
+                <span data-lang="ja">やさしい分析を開始</span>
+            </button>
+        </div>
+        
+        <div class="processing" id="processingCard">
+            <div class="eyebrow">
+                <span data-lang="en">processing — take a breath</span>
+                <span data-lang="ja">処理中 — 深呼吸してください</span>
+            </div>
+            <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; margin-bottom: 16px;">
+                <span data-lang="en">Analyzing your document</span>
+                <span data-lang="ja">文書を分析中</span>
+            </h2>
+            <div class="wave-loader">
+                <div class="wave-dot"></div>
+                <div class="wave-dot"></div>
+                <div class="wave-dot"></div>
+                <div class="wave-dot"></div>
+                <div class="wave-dot"></div>
+            </div>
+            <p style="color: var(--kira-text-secondary);">
+                <span data-lang="en">Breaking down complex clauses into human language...</span>
+                <span data-lang="ja">複雑な条項を人間の言葉に分解中...</span>
+            </p>
+        </div>
+        
+        <div class="progress-container hidden" id="progressContainer">
+            <div class="progress-header">
+                <div>
+                    <div class="eyebrow">
+                        <span data-lang="en">progress — gentle waves</span>
+                        <span data-lang="ja">進捗 — やさしい波</span>
+                    </div>
+                    <div style="font-size: 18px; margin-top: 8px;" id="progressText">
+                        <span data-lang="en">Section 1 of 3</span>
+                        <span data-lang="ja">セクション 1 / 3</span>
+                    </div>
+                </div>
+                <div class="section-badge" id="progressBadge">
+                    <span data-lang="en">in progress</span>
+                    <span data-lang="ja">進行中</span>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <div class="analysis-section" id="analysisSection">
+            <!-- Dynamic content will be inserted here -->
+        </div>
+        
+        <div class="breathing-break" id="breathingBreak">
+            <h3 class="breathing-title">
+                <span data-lang="en">Take a moment to breathe</span>
+                <span data-lang="ja">呼吸を整えましょう</span>
+            </h3>
+            <div class="breathing-circle" id="breathingCircle">
+                <span id="breathingText">
+                    <span data-lang="en">breathe</span>
+                    <span data-lang="ja">呼吸</span>
+                </span>
+            </div>
+            <button class="btn-primary" onclick="continueReading()">
+                <span data-lang="en">Continue reading</span>
+                <span data-lang="ja">読み続ける</span>
+            </button>
+            <button class="btn-primary" onclick="skipBreathing()" style="background: transparent; border-color: rgba(158, 196, 168, 0.2); margin-left: 16px;">
+                <span data-lang="en">Skip break</span>
+                <span data-lang="ja">休憩をスキップ</span>
+            </button>
+        </div>
+        
+        <div class="divider"></div>
+    </div>
+    
+    <!-- Feedback Widget -->
+    <div id="kira-feedback" style="position:fixed;bottom:16px;right:16px;z-index:9999;">
+      <button id="kira-fb-btn" onclick="document.getElementById('kira-fb-form').style.display=document.getElementById('kira-fb-form').style.display==='none'?'flex':'none'" style="background:rgba(201,168,224,0.12);border:0.5px solid rgba(201,168,224,0.3);border-radius:40px;padding:8px 16px;color:rgba(245,240,250,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;">Feedback</button>
+      <form id="kira-fb-form" style="display:none;flex-direction:column;gap:8px;margin-top:8px;background:rgba(11,11,15,0.95);border:0.5px solid rgba(201,168,224,0.2);border-radius:12px;padding:16px;min-width:240px;" onsubmit="return kiraSubmitFeedback(event)">
+        <select id="kira-fb-type" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;">
+          <option value="love">Love it</option><option value="bug">Bug report</option><option value="idea">Feature idea</option><option value="other">Other</option>
+        </select>
+        <textarea id="kira-fb-msg" placeholder="Your thoughts..." rows="3" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;resize:vertical;"></textarea>
+        <button type="submit" style="background:rgba(201,168,224,0.1);border:0.5px solid rgba(201,168,224,0.35);border-radius:40px;padding:8px;color:#c9a8e0;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.15em;cursor:pointer;text-transform:uppercase;">Send</button>
+        <div id="kira-fb-status" style="font-size:11px;color:rgba(245,240,250,0.5);text-align:center;"></div>
+      </form>
+    </div>
+    
+    <script>
+        let currentLanguage = 'en';
+        let currentSection = 0;
+        let totalSections = 0;
+        let documentSections = [];
+        let isBreathing = false;
+        
+        // Sample legal document sections for demo
+        const sampleSections = {
+            en: [
+                {
+                    title: "Party Obligations",
+                    complexity: "medium",
+                    original: "The Licensor hereby grants to Licensee a non-exclusive, non-transferable license to use the Licensed Materials solely for the purposes set forth in Exhibit A, subject to the terms and conditions of this Agreement.",
+                    plain: "The company giving you permission (Licensor) is letting you use their materials, but with important limits: only you can use them (can't share with others), only for the specific purposes listed in Exhibit A, and you must follow all the rules in this contract.",
+                    keyPoints: [
+                        "You get permission to use specific materials",
+                        "You cannot transfer this permission to others",
+                        "Usage is limited to purposes in Exhibit A",
+                        "All contract terms must be followed"
+                    ]
+                },
+                {
+                    title: "Termination Clause",
+                    complexity: "high",
+                    original: "This Agreement shall terminate automatically upon material breach by either party, provided that the non-breaching party has given written notice of such breach and the breaching party has failed to cure such breach within thirty (30) days of receipt of such notice.",
+                    plain: "The contract ends automatically if someone seriously breaks the rules, but only after: the innocent party writes a formal complaint, and the rule-breaker gets 30 days to fix the problem but doesn't.",
+                    keyPoints: [
+                        "Contract can end if rules are seriously broken",
+                        "Written notice must be given first",
+                        "30-day grace period to fix the problem",
+                        "Automatic termination if not fixed"
+                    ]
+                },
+                {
+                    title: "Payment Terms",
+                    complexity: "low",
+                    original: "Payment shall be due within thirty (30) days of invoice date. Late payments may incur a service charge of 1.5% per month.",
+                    plain: "You have 30 days to pay after getting a bill. If you're late, there's an extra fee of 1.5% each month you're behind.",
+                    keyPoints: [
+                        "30 days to pay from invoice date",
+                        "Late fee of 1.5% per month",
+                        "Simple payment schedule"
+                    ]
+                }
+            ],
+            ja: [
+                {
+                    title: "当事者の義務",
+                    complexity: "medium",
+                    original: "ライセンサーは、本契約の条項に従い、別紙Aに記載された目的のためにのみ、ライセンシーに対して非独占的かつ譲渡不可能なライセンス材料の使用権を付与する。",
+                    plain: "許可を出す会社（ライセンサー）があなたに材料を使わせてくれますが、重要な制限があります：あなただけが使える（他人と共有不可）、別紙Aに書かれた特定の目的のためだけ、そしてこの契約のすべてのルールに従う必要があります。",
+                    keyPoints: [
+                        "特定の材料を使用する許可を得る",
+                        "この許可を他人に譲渡することはできない",
+                        "使用は別紙Aの目的に限定される",
+                        "すべての契約条件に従う必要がある"
+                    ]
+                },
+                {
+                    title: "解除条項",
+                    complexity: "high",
+                    original: "いずれかの当事者による重大な違反があった場合、非違反当事者が書面による通知を行い、違反当事者が通知受領後30日以内に違反を治癒しなかった場合、本契約は自動的に終了する。",
+                    plain: "誰かが重大にルールを破った場合、契約は自動的に終了しますが、条件があります：被害を受けた側が正式な書面で苦情を出し、ルールを破った側が30日以内に問題を解決しなかった場合のみです。",
+                    keyPoints: [
+                        "ルールが重大に破られた場合契約終了",
+                        "最初に書面通知が必要",
+                        "問題解決のための30日の猶予期間",
+                        "解決されない場合は自動終了"
+                    ]
+                },
+                {
+                    title: "支払い条件",
+                    complexity: "low",
+                    original: "支払いは請求書発行日から30日以内に行うものとする。遅延支払いには月額1.5%のサービス料が課される場合がある。",
+                    plain: "請求書を受け取ってから30日以内に支払う必要があります。遅れた場合、毎月1.5%の追加料金がかかります。",
+                    keyPoints: [
+                        "請求書日から30日以内に支払い",
+                        "遅延時は月額1.5%の手数料",
+                        "シンプルな支払いスケジュール"
+                    ]
+                }
+            ]
+        };
+        
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'en' ? 'ja' : 'en';
+            document.body.className = currentLanguage === 'ja' ? 'lang-ja' : '';
+            updatePlaceholder();
+        }
+        
+        function updatePlaceholder() {
+            const textarea = document.getElementById('documentText');
+            const placeholder = currentLanguage === 'en' ? 
+                'Paste your legal document text here...' : 
+                '法務文書のテキストをここに貼り付けてください...';
+            textarea.placeholder = placeholder;
+        }
+        
+        function startAnalysis() {
+            const documentText = document.getElementById('documentText').value.trim();
+            
+            if (!documentText) {
+                alert(currentLanguage === 'en' ? 
+                    'Please enter or upload a document first.' : 
+                    '最初に文書を入力またはアップロードしてください。');
+                return;
+            }
+            
+            // Show processing
+            document.getElementById('uploadCard').style.display = 'none';
+            document.getElementById('processingCard').style.display = 'block';
+            
+            // Simulate processing time
+            setTimeout(() => {
+                startDocumentReview();
+            }, 3000);
+        }
+        
+        function startDocumentReview() {
+            documentSections = sampleSections[currentLanguage];
+            totalSections = documentSections.length;
+            currentSection = 0;
+            
+            document.getElementById('processingCard').style.display = 'none';
+            document.getElementById('progressContainer').classList.remove('hidden');
+            document.getElementById('analysisSection').style.display = 'block';
+            
+            displayCurrentSection();
+        }
+        
+        function displayCurrentSection() {
+            if (currentSection >= totalSections) {
+                showCompletion();
+                return;
+            }
+            
+            const section = documentSections[currentSection];
+            const analysisSection = document.getElementById('analysisSection');
+            
+            // Update progress
+            updateProgress();
+            
+            const sectionHtml = `
+                <div class="section-card" style="animation: fadeIn 0.4s ease;">
+                    <div class="section-header">
+                        <h3 class="section-title">${section.title}</h3>
+                        <div class="section-badge ${section.complexity === 'high' ? 'complexity-high' : ''}">
+                            <span data-lang="en">${section.complexity} complexity</span>
+                            <span data-lang="ja">${section.complexity === 'high' ? '高' : section.complexity === 'medium' ? '中' : '低'}複雑度</span>
+                        </div>
+                    </div>
+                    
+                    <div class="original-text">
+                        ${section.original}
+                    </div>
+                    
+                    <div class="plain-language">
+                        ${section.plain}
+                    </div>
+                    
+                    <div class="key-points">
+                        <h4>
+                            <span data-lang="en">Key Points</span>
+                            <span data-lang="ja">重要なポイント</span>
+                        </h4>
+                        <ul>
+                            ${section.keyPoints.map(point => `<li>${point}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <button class="btn-primary" onclick="nextSection()">
+                        <span data-lang="en">Continue to next section</span>
+                        <span data-lang="ja">次のセクションに進む</span>
+                    </button>
+                </div>
+            `;
+            
+            analysisSection.innerHTML = sectionHtml;
+            
+            // Update language visibility
+            if (currentLanguage === 'ja') {
+                document.body.className = 'lang-ja';
+            }
+            
+            // Scroll to section
+            analysisSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function updateProgress() {
+            const progressText = document.getElementById('progressText');
+            const progressFill = document.getElementById('progressFill');
+            const progressBadge = document.getElementById('progressBadge');
+            
+            progressText.innerHTML = `
+                <span data-lang="en">Section ${currentSection + 1} of ${totalSections}</span>
+                <span data-lang="ja">セクション ${currentSection + 1} / ${totalSections}</span>
+            `;
+            
+            const progressPercent = ((currentSection + 1) / totalSections) * 100;
+            progressFill.style.width = `${progressPercent}%`;
+            
+            if (currentSection + 1 === totalSections) {
+                progressBadge.innerHTML = `
+                    <span data-lang="en">final section</span>
+                    <span data-lang="ja">最終セクション</span>
+                `;
+            }
+        }
+        
+        function nextSection() {
+            currentSection++;
+            
+            if (currentSection < totalSections) {
+                showBreathingBreak();
+            } else {
+                showCompletion();
+            }
+        }
+        
+        function showBreathingBreak() {
+            document.getElementById('analysisSection').style.display = 'none';
+            document.getElementById('breathingBreak').style.display = 'block';
+            
+            startBreathingAnimation();
+        }
+        
+        function startBreathingAnimation() {
+            const circle = document.getElementById('breathingCircle');
+            const text = document.getElementById('breathingText');
+            
+            let phase = 'inhale';
+            isBreathing = true;
+            
+            function breatheCycle() {
+                if (!isBreathing) return;
+                
+                if (phase === 'inhale') {
+                    circle.classList.add('inhale');
+                    circle.classList.remove('exhale');
+                    text.innerHTML = `
+                        <span data-lang="en">inhale</span>
+                        <span data-lang="ja">吸う</span>
+                    `;
+                    phase = 'hold1';
+                    setTimeout(breatheCycle, 4000);
+                } else if (phase === 'hold1') {
+                    text.innerHTML = `
+                        <span data-lang="en">hold</span>
+                        <span data-lang="ja">止める</span>
+                    `;
+                    phase = 'exhale';
+                    setTimeout(breatheCycle, 2000);
+                } else if (phase === 'exhale') {
+                    circle.classList.add('exhale');
+                    circle.classList.remove('inhale');
+                    text.innerHTML = `
+                        <span data-lang="en">exhale</span>
+                        <span data-lang="ja">吐く</span>
+                    `;
+                    phase = 'hold2';
+                    setTimeout(breatheCycle, 4000);
+                } else {
+                    text.innerHTML = `
+                        <span data-lang="en">hold</span>
+                        <span data-lang="ja">止める</span>
+                    `;
+                    phase = 'inhale';
+                    setTimeout(breatheCycle, 2000);
+                }
+                
+                // Update language visibility
+                if (currentLanguage === 'ja') {
+                    document.body.className = 'lang-ja';
+                }
+            }
+            
+            breatheCycle();
+        }
+        
+        function continueReading() {
+            isBreathing = false;
+            document.getElementById('breathingBreak').style.display = 'none';
+            document.getElementById('analysisSection').style.display = 'block';
+            displayCurrentSection();
+        }
+        
+        function skipBreathing() {
+            isBreathing = false;
+            document.getElementById('breathingBreak').style.display = 'none';
+            document.getElementById('analysisSection').style.display = 'block';
+            displayCurrentSection();
+        }
+        
+        function showCompletion() {
+            const analysisSection = document.getElementById('analysisSection');
+            
+            analysisSection.innerHTML = `
+                <div class="section-card" style="animation: fadeIn 0.4s ease; text-align: center;">
+                    <div class="eyebrow">
+                        <span data-lang="en">complete — well done</span>
+                        <span data-lang="ja">完了 — よくできました</span>
+                    </div>
+                    <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; margin: 24px 0; color: var(--kira-sage);">
+                        <span data-lang="en">Document Review Complete</span>
+                        <span data-lang="ja">文書レビュー完了</span>
+                    </h2>
+                    <p style="font-size: 16px; margin-bottom: 24px; color: var(--kira-text-secondary);">
+                        <span data-lang="en">You've successfully navigated through all sections of your legal document. Take a moment to reflect on what you've learned.</span>
+                        <span data-lang="ja">法務文書のすべてのセクションを正常にナビゲートしました。学んだことを振り返る時間を取ってください。</span>
+                    </p>
+                    <button class="btn-primary" onclick="resetApp()">
+                        <span data-lang="en">Review another document</span>
+                        <span data-lang="ja">別の文書をレビュー</span>
+                    </button>
+                </div>
+            `;
+            
+            // Update progress to 100%
+            const progressFill = document.getElementById('progressFill');
+            const progressBadge = document.getElementById('progressBadge');
+            progressFill.style.width = '100%';
+            progressBadge.innerHTML = `
+                <span data-lang="en">completed</span>
+                <span data-lang="ja">完了</span>
+            `;
+            
+            // Update language visibility
+            if (currentLanguage === 'ja') {
+                document.body.className = 'lang-ja';
+            }
+        }
+        
+        function resetApp() {
+            currentSection = 0;
+            totalSections = 0;
+            documentSections = [];
+            
+            document.getElementById('documentText').value = '';
+            document.getElementById('uploadCard').style.display = 'block';
+            document.getElementById('progressContainer').classList.add('hidden');
+            document.getElementById('analysisSection').style.display = 'none';
+            document.getElementById('breathingBreak').style.display = 'none';
+            
+            document.getElementById('uploadCard').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // File upload handling
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('documentText').value = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        });
+        
+        // Drag and drop handling
+        const uploadArea = document.querySelector('.upload-area');
+        
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('documentText').value = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        });
+        
+        // Initialize
+        updatePlaceholder();
+    </script>
+    
+    <script>
+    function kiraSubmitFeedback(e){
+      e.preventDefault();
+      var type=document.getElementById('kira-fb-type').value;
+      var msg=document.getElementById('kira-fb-msg').value.trim();
+      if(!msg){document.getElementById('kira-fb-status').textContent='Please write something';return false;}
+      var APP_NAME=document.title||location.pathname.split('/').filter(Boolean).pop()||'unknown';
+      var url='https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_feedback';
+      fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{
+        app_name:{stringValue:APP_NAME},type:{stringValue:type},message:{stringValue:msg.substring(0,1000)},
+        url:{stringValue:location.href.substring(0,200)},timestamp:{stringValue:new Date().toISOString()}
+      }})}).then(function(){
+        document.getElementById('kira-fb-status').textContent='Thank you!';
+        document.getElementById('kira-fb-msg').value='';
+        setTimeout(function(){document.getElementById('kira-fb-form').style.display='none';document.getElementById('kira-fb-status').textContent='';},2000);
+      }).catch(function(){document.getElementById('kira-fb-status').textContent='Failed to send';});
+      return false;
+    }
+    </script>
+</body>
+</html>
