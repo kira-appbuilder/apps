@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalAgent Hub</title>
+    
+    <!-- Kira Error Reporter -->
+    <script>
+    (function(){
+      var APP_NAME = document.title || location.pathname.split('/').filter(Boolean).pop() || 'unknown';
+      var FIRESTORE_URL = 'https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_errors';
+      var reported = {};
+      function report(msg, source, line, col, err) {
+        var key = msg + ':' + (line||0);
+        if (reported[key]) return;
+        reported[key] = true;
+        try {
+          fetch(FIRESTORE_URL, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({fields:{
+              app_name:{stringValue:APP_NAME},
+              message:{stringValue:String(msg).substring(0,500)},
+              source:{stringValue:String(source||'').substring(0,200)},
+              line:{integerValue:String(line||0)},
+              user_agent:{stringValue:navigator.userAgent.substring(0,200)},
+              url:{stringValue:location.href.substring(0,200)},
+              timestamp:{stringValue:new Date().toISOString()}
+            }})
+          }).catch(function(){});
+        } catch(e){}
+      }
+      window.onerror = report;
+      window.addEventListener('unhandledrejection', function(e){ report('Unhandled rejection: '+(e.reason||''),''  ,0,0,null); });
+    })();
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Space+Mono:wght@400&family=Zen+Kaku+Gothic+New:wght@300;400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --kira-bg: #0b0b0f;
+            --kira-surface: rgba(255,255,255,0.03);
+            --kira-surface-hover: rgba(255,255,255,0.06);
+            --kira-cyan: #7de8e8;
+            --kira-sage: #9ec4a8;
+            --kira-text-primary: rgba(245,240,250,0.92);
+            --kira-text-secondary: rgba(245,240,250,0.45);
+            --kira-text-hint: rgba(245,240,250,0.2);
+            --kira-border: rgba(125,232,232,0.18);
+            --kira-border-focus: rgba(125,232,232,0.45);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-pill: 40px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: var(--kira-bg);
+            color: var(--kira-text-primary);
+            font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+            font-weight: 300;
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        
+        .bg-glow {
+            position: absolute;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(125,232,232,0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .bg-glow-bottom {
+            position: absolute;
+            bottom: -120px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(158,196,168,0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+            animation: fadeInUp 0.6s ease both;
+        }
+        
+        .lang-toggle {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(125,232,232,0.1);
+            border: 0.5px solid rgba(125,232,232,0.35);
+            border-radius: var(--radius-pill);
+            padding: 8px 16px;
+            color: var(--kira-cyan);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        
+        .lang-toggle:hover {
+            background: rgba(125,232,232,0.18);
+            border-color: rgba(125,232,232,0.6);
+            transform: translateY(-1px);
+        }
+        
+        .eyebrow {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.25em;
+            color: var(--kira-cyan);
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-bottom: 12px;
+        }
+        
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 48px;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: var(--kira-text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .japanese-subtitle {
+            font-size: 14px;
+            color: var(--kira-text-hint);
+            font-style: italic;
+        }
+        
+        .main-content {
+            animation: fadeInUp 0.6s ease 0.15s both;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .card {
+            background: rgba(125,232,232,0.04);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            transition: border-color 0.3s, background 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--kira-cyan), var(--kira-sage));
+            opacity: 0.4;
+        }
+        
+        .card:hover {
+            border-color: var(--kira-border-focus);
+            background: rgba(125,232,232,0.06);
+        }
+        
+        .agent-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+        
+        .agent-info h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+        
+        .agent-meta {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            color: var(--kira-text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        
+        .agent-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(125,232,232,0.06);
+            border: 0.5px solid rgba(125,232,232,0.15);
+            border-radius: var(--radius-pill);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: rgba(125,232,232,0.8);
+            letter-spacing: 0.1em;
+        }
+        
+        .status-badge.healthy {
+            background: rgba(158,196,168,0.06);
+            border-color: rgba(158,196,168,0.15);
+            color: rgba(158,196,168,0.8);
+        }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--kira-cyan);
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.healthy {
+            background: var(--kira-sage);
+        }
+        
+        .resource-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 120px;
+        }
+        
+        .resource-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .resource-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 0.1em;
+            color: var(--kira-text-secondary);
+            text-transform: uppercase;
+            min-width: 32px;
+        }
+        
+        .resource-bar {
+            flex: 1;
+            height: 4px;
+            background: rgba(245,240,250,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .resource-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--kira-cyan), var(--kira-sage));
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        
+        .resource-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            color: var(--kira-text-hint);
+            min-width: 32px;
+            text-align: right;
+        }
+        
+        .activity-log {
+            margin-top: 32px;
+        }
+        
+        .section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 16px;
+        }
+        
+        .log-entries {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--kira-surface);
+            border: 0.5px solid rgba(245,240,250,0.08);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+        }
+        
+        .log-message {
+            flex: 1;
+        }
+        
+        .log-timestamp {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--kira-text-hint);
+            letter-spacing: 0.05em;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: rgba(125,232,232,0.1);
+            border: 0.5px solid rgba(125,232,232,0.35);
+            border-radius: var(--radius-pill);
+            padding: 10px 28px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            color: var(--kira-cyan);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: none;
+        }
+        
+        .btn:hover {
+            background: rgba(125,232,232,0.18);
+            border-color: rgba(125,232,232,0.6);
+            transform: translateY(-1px);
+        }
+        
+        .btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .btn.secondary {
+            background: rgba(158,196,168,0.1);
+            border-color: rgba(158,196,168,0.35);
+            color: var(--kira-sage);
+        }
+        
+        .btn.secondary:hover {
+            background: rgba(158,196,168,0.18);
+            border-color: rgba(158,196,168,0.6);
+        }
+        
+        .divider {
+            width: 1px;
+            height: 32px;
+            background: linear-gradient(to bottom, transparent, rgba(125,232,232,0.25), transparent);
+            margin: 24px auto;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 48px;
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+        
+        .footer-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            color: var(--kira-text-hint);
+            text-transform: uppercase;
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50%       { opacity: 0.8; }
+        }
+        
+        .new-entry {
+            animation: fadeIn 0.4s ease;
+        }
+        
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 32px 16px;
+            }
+            
+            h1 {
+                font-size: 36px;
+            }
+            
+            .agent-card {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+        }
+        
+        /* Language toggle */
+        [data-lang="ja"] {
+            display: none;
+        }
+        
+        .lang-ja [data-lang="en"] {
+            display: none;
+        }
+        
+        .lang-ja [data-lang="ja"] {
+            display: inline;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="bg-glow-bottom"></div>
+    
+    <button class="lang-toggle" onclick="toggleLanguage()">
+        <span data-lang="en">日本語</span>
+        <span data-lang="ja">English</span>
+    </button>
+    
+    <div class="container">
+        <header class="header">
+            <div class="eyebrow">
+                <span data-lang="en">Local Intelligence</span>
+                <span data-lang="ja">ローカルインテリジェンス</span>
+            </div>
+            <h1>
+                <span data-lang="en">LocalAgent Hub</span>
+                <span data-lang="ja">ローカルエージェントハブ</span>
+            </h1>
+            <div class="subtitle">
+                <span data-lang="en">Beautiful monitoring for your self-hosted AI agents</span>
+                <span data-lang="ja">セルフホストAIエージェントのための美しいモニタリング</span>
+            </div>
+            <div class="japanese-subtitle">
+                <span data-lang="en">静かな監視。信頼できる知能。</span>
+                <span data-lang="ja">Calm monitoring. Trustworthy intelligence.</span>
+            </div>
+        </header>
+        
+        <main class="main-content">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="agent-card">
+                        <div class="agent-info">
+                            <h3>
+                                <span data-lang="en">Qwen 3.6 Plus</span>
+                                <span data-lang="ja">Qwen 3.6 Plus</span>
+                            </h3>
+                            <div class="agent-meta">
+                                <span data-lang="en">Port 8080 • 32B Model</span>
+                                <span data-lang="ja">ポート 8080 • 32Bモデル</span>
+                            </div>
+                            <div class="agent-status">
+                                <div class="status-badge healthy">
+                                    <div class="status-dot healthy"></div>
+                                    <span data-lang="en">Healthy</span>
+                                    <span data-lang="ja">正常</span>
+                                </div>
+                            </div>
+                            <div class="agent-meta">
+                                <span data-lang="en">Last response: 0.8s</span>
+                                <span data-lang="ja">最終応答: 0.8秒</span>
+                            </div>
+                        </div>
+                        <div class="resource-bars">
+                            <div class="resource-item">
+                                <div class="resource-label">CPU</div>
+                                <div class="resource-bar">
+                                    <div class="resource-fill" style="width: 45%"></div>
+                                </div>
+                                <div class="resource-value">45%</div>
+                            </div>
+                            <div class="resource-item">
+                                <div class="resource-label">RAM</div>
+                                <div class="resource-bar">
+                                    <div class="resource-fill" style="width: 67%"></div>
+                                </div>
+                                <div class="resource-value">67%</div>
+                            </div>
+                            <div class="resource-item">
+                                <div class="resource-label">GPU</div>
+                                <div class="resource-bar">
+                                    <div class="resource-fill" style="width: 78%"></div>
+                                </div>
+                                <div class="resource-value">78%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="agent-card">
+                        <div class="agent-info">
+                            <h3>
+                                <span data-lang="en">AMD Lemonade LLM</span>
+                                <span data-lang="ja">AMD Lemonade LLM</span>
+                            </h3>
+                            <div class="agent-meta">
+                                <span data-lang="en">Port 8081 • 7B Model</span>
+                                <span data-lang="ja">ポート 8081 • 7Bモデル</span>
+                            </div>
+                            <div class="agent-status">
+                                <div class="status-badge healthy">
+                                    <div class="status-dot healthy"></div>
+                                    <span data-lang="en">Healthy</span>
+                                    <span data-lang="ja">正常</span>
+                                </div>
+                            </div>
+                            <div class="agent-meta">
+                                <span data-lang="en">Last response: 1.2s</span>
+                                <span data-lang="ja">最終応答: 1.2秒</span>
+                            </div>
+                        </div>
+                        <div class="resource-bars">
+                            <div class="resource-item">
+                                <div class="resource-label">CPU</div>
+                                <div class="resource-bar">
+                                    <div class="resource-fill" style="width: 32%"></div>
+                                </div>
+                                <div class="resource-value">32%</div>
+                            </div>
+                            <div class="resource-item">
+                                <div class="resource-label">RAM</div>
+                                <div class="resource-bar">
+                                    <div class="resource-fill" style="width: 23%"></div>
+                                </div>
+                                <div class="resource-value">23%</div>
+                            </div>
+                            <div class="resource-item">
+                                <div class="resource-label">GPU</div>
+                                <div class="resource-bar">
+                                    <div class="resource-fill" style="width: 56%"></div>
+                                </div>
+                                <div class="resource-value">56%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="agent-card">
+                        <div class="agent-info">
+                            <h3>
+                                <span data-lang="en">Whisper Speech-to-Text</span>
+                                <span data-lang="ja">Whisper 音声認識</span>
+                            </h3>
+                            <div class="agent-meta">
+                                <span data-lang="en">Port 8082 • OpenAI Whisper Large</span>
+                                <span data-lang="ja">ポート 8082 • OpenAI Whisper Large</span>
+                            </div>
+                            <div class="agent-status">
+                                <div class="status-badge">
+                                    <div class="status-dot"></div>
+                                    <span data-lang="en">Idle</span>
+                                    <span data-lang="ja">待機中</span>
+                                </div>
+                            </div>
+                            <div class="agent-meta">
+                                <span data-lang="en">Last activity: 15m ago</span>
+                                <span data-lang="ja">最終活動: 15分前</span>
+                            </div>
+                        </div>
+                        <div class="resource-bars">
+                            <div class="resource-item">
+                                <div class="resource-label">CPU</div>
+                                <div class="resource-bar">
+                                    <div class="resource-fill" style="width: 8%"></div>
+                                </div>
+                                <div class="resource-value">8%</div>
+                            </div>
+                            <div class="resource-item">
+                                <div class="resource-label">RAM</div>
+                                <div class="resource-bar">
+                                    <div class="resource-fill" style="width: 12%"></div>
+                                </div>
+                                <div class="resource-value">12%</div>
+                            </div>
+                            <div class="resource-item">
+                                <div class="resource-label">GPU</div>
+                                <div class="resource-bar">
+                                    <div class="resource-fill" style="width: 5%"></div>
+                                </div>
+                                <div class="resource-value">5%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <section class="activity-log">
+                <h2 class="section-title">
+                    <span data-lang="en">Activity Log</span>
+                    <span data-lang="ja">アクティビティログ</span>
+                </h2>
+                <div class="log-entries" id="logEntries">
+                    <div class="log-entry">
+                        <div class="log-message">
+                            <span data-lang="en">Qwen 3.6 Plus processed inference request</span>
+                            <span data-lang="ja">Qwen 3.6 Plus が推論リクエストを処理しました</span>
+                        </div>
+                        <div class="log-timestamp">14:32:18</div>
+                    </div>
+                    <div class="log-entry">
+                        <div class="log-message">
+                            <span data-lang="en">System health check completed - All agents healthy</span>
+                            <span data-lang="ja">システムヘルスチェック完了 - 全エージェント正常</span>
+                        </div>
+                        <div class="log-timestamp">14:30:00</div>
+                    </div>
+                    <div class="log-entry">
+                        <div class="log-message">
+                            <span data-lang="en">AMD Lemonade LLM started successfully</span>
+                            <span data-lang="ja">AMD Lemonade LLM が正常に開始されました</span>
+                        </div>
+                        <div class="log-timestamp">14:25:12</div>
+                    </div>
+                </div>
+            </section>
+            
+            <div class="actions">
+                <button class="btn" onclick="addAgent()">
+                    <span data-lang="en">Add Agent</span>
+                    <span data-lang="ja">エージェント追加</span>
+                </button>
+                <button class="btn secondary" onclick="runHealthCheck()">
+                    <span data-lang="en">Health Check</span>
+                    <span data-lang="ja">ヘルスチェック</span>
+                </button>
+                <button class="btn secondary" onclick="viewSettings()">
+                    <span data-lang="en">Settings</span>
+                    <span data-lang="ja">設定</span>
+                </button>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <div class="footer-text">
+                <span data-lang="en">Local Intelligence • Privacy First</span>
+                <span data-lang="ja">ローカル知能 • プライバシー第一</span>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Kira Feedback Widget -->
+    <div id="kira-feedback" style="position:fixed;bottom:16px;right:16px;z-index:9999;">
+      <button id="kira-fb-btn" onclick="document.getElementById('kira-fb-form').style.display=document.getElementById('kira-fb-form').style.display==='none'?'flex':'none'" style="background:rgba(201,168,224,0.12);border:0.5px solid rgba(201,168,224,0.3);border-radius:40px;padding:8px 16px;color:rgba(245,240,250,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;">Feedback</button>
+      <form id="kira-fb-form" style="display:none;flex-direction:column;gap:8px;margin-top:8px;background:rgba(11,11,15,0.95);border:0.5px solid rgba(201,168,224,0.2);border-radius:12px;padding:16px;min-width:240px;" onsubmit="return kiraSubmitFeedback(event)">
+        <select id="kira-fb-type" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;">
+          <option value="love">Love it</option><option value="bug">Bug report</option><option value="idea">Feature idea</option><option value="other">Other</option>
+        </select>
+        <textarea id="kira-fb-msg" placeholder="Your thoughts..." rows="3" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;resize:vertical;"></textarea>
+        <button type="submit" style="background:rgba(201,168,224,0.1);border:0.5px solid rgba(201,168,224,0.35);border-radius:40px;padding:8px;color:#c9a8e0;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.15em;cursor:pointer;text-transform:uppercase;">Send</button>
+        <div id="kira-fb-status" style="font-size:11px;color:rgba(245,240,250,0.5);text-align:center;"></div>
+      </form>
+    </div>
+    
+    <script>
+        let currentLanguage = 'en';
+        let logCounter = 0;
+        
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'en' ? 'ja' : 'en';
+            document.body.classList.toggle('lang-ja', currentLanguage === 'ja');
+        }
+        
+        function addAgent() {
+            const name = currentLanguage === 'en' ? 
+                prompt('Enter agent name:') : 
+                prompt('エージェント名を入力:');
+            if (name) {
+                addLogEntry(
+                    currentLanguage === 'en' ? 
+                    `New agent "${name}" added to monitoring` :
+                    `新しいエージェント "${name}" をモニタリングに追加`
+                );
+            }
+        }
+        
+        function runHealthCheck() {
+            addLogEntry(
+                currentLanguage === 'en' ? 
+                'Running comprehensive health check on all agents...' :
+                'すべてのエージェントの包括的ヘルスチェックを実行中...'
+            );
+            
+            setTimeout(() => {
+                addLogEntry(
+                    currentLanguage === 'en' ? 
+                    'Health check completed - All systems operational' :
+                    'ヘルスチェック完了 - すべてのシステム正常稼働'
+                );
+            }, 2000);
+        }
+        
+        function viewSettings() {
+            alert(currentLanguage === 'en' ? 
+                'Settings panel would open here in a full implementation.' :
+                '設定パネルは完全な実装でここに表示されます。');
+        }
+        
+        function addLogEntry(message) {
+            const logEntries = document.getElementById('logEntries');
+            const timestamp = new Date().toLocaleTimeString('en-GB').substr(0, 8);
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry new-entry';
+            entry.innerHTML = `
+                <div class="log-message">${message}</div>
+                <div class="log-timestamp">${timestamp}</div>
+            `;
+            
+            logEntries.insertBefore(entry, logEntries.firstChild);
+            
+            // Keep only last 5 entries
+            while (logEntries.children.length > 5) {
+                logEntries.removeChild(logEntries.lastChild);
+            }
+        }
+        
+        // Simulate resource updates
+        function updateResources() {
+            const resourceBars = document.querySelectorAll('.resource-fill');
+            resourceBars.forEach(bar => {
+                const currentWidth = parseInt(bar.style.width);
+                const variation = Math.random() * 10 - 5; // ±5%
+                let newWidth = currentWidth + variation;
+                newWidth = Math.max(5, Math.min(95, newWidth)); // Clamp between 5-95%
+                bar.style.width = newWidth + '%';
+                
+                // Update the corresponding value display
+                const valueDisplay = bar.parentNode.parentNode.querySelector('.resource-value');
+                if (valueDisplay) {
+                    valueDisplay.textContent = Math.round(newWidth) + '%';
+                }
+            });
+        }
+        
+        // Simulate live updates
+        setInterval(updateResources, 5000);
+        
+        // Add periodic activity
+        function simulateActivity() {
+            const activities = {
+                en: [
+                    'Background model optimization completed',
+                    'Memory cleanup performed automatically',
+                    'Agent response time optimized',
+                    'System monitoring checkpoint reached'
+                ],
+                ja: [
+                    'バックグラウンドモデル最適化完了',
+                    'メモリクリーンアップが自動実行されました',
+                    'エージェント応答時間が最適化されました',
+                    'システム監視チェックポイントに到達'
+                ]
+            };
+            
+            const messages = activities[currentLanguage];
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            addLogEntry(randomMessage);
+        }
+        
+        // Add activity every 15-30 seconds
+        setInterval(simulateActivity, Math.random() * 15000 + 15000);
+        
+        function kiraSubmitFeedback(e){
+          e.preventDefault();
+          var type=document.getElementById('kira-fb-type').value;
+          var msg=document.getElementById('kira-fb-msg').value.trim();
+          if(!msg){document.getElementById('kira-fb-status').textContent='Please write something';return false;}
+          var APP_NAME=document.title||location.pathname.split('/').filter(Boolean).pop()||'unknown';
+          var url='https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_feedback';
+          fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{
+            app_name:{stringValue:APP_NAME},type:{stringValue:type},message:{stringValue:msg.substring(0,1000)},
+            url:{stringValue:location.href.substring(0,200)},timestamp:{stringValue:new Date().toISOString()}
+          }})}).then(function(){
+            document.getElementById('kira-fb-status').textContent='Thank you!';
+            document.getElementById('kira-fb-msg').value='';
+            setTimeout(function(){document.getElementById('kira-fb-form').style.display='none';document.getElementById('kira-fb-status').textContent='';},2000);
+          }).catch(function(){document.getElementById('kira-fb-status').textContent='Failed to send';});
+          return false;
+        }
+    </script>
+</body>
+</html>
