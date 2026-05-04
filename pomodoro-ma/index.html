@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PomodoroMA</title>
+    
+    <!-- Kira Error Reporter -->
+    <script>
+    (function(){
+      var APP_NAME = document.title || location.pathname.split('/').filter(Boolean).pop() || 'unknown';
+      var FIRESTORE_URL = 'https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_errors';
+      var reported = {};
+      function report(msg, source, line, col, err) {
+        var key = msg + ':' + (line||0);
+        if (reported[key]) return;
+        reported[key] = true;
+        try {
+          fetch(FIRESTORE_URL, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({fields:{
+              app_name:{stringValue:APP_NAME},
+              message:{stringValue:String(msg).substring(0,500)},
+              source:{stringValue:String(source||'').substring(0,200)},
+              line:{integerValue:String(line||0)},
+              user_agent:{stringValue:navigator.userAgent.substring(0,200)},
+              url:{stringValue:location.href.substring(0,200)},
+              timestamp:{stringValue:new Date().toISOString()}
+            }})
+          }).catch(function(){});
+        } catch(e){}
+      }
+      window.onerror = report;
+      window.addEventListener('unhandledrejection', function(e){ report('Unhandled rejection: '+(e.reason||''),'',0,0,null); });
+    })();
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --kira-bg: #0b0b0f;
+            --kira-surface: rgba(255,255,255,0.03);
+            --kira-surface-hover: rgba(255,255,255,0.06);
+            --kira-lavender: #c9a8e0;
+            --kira-sage: #9ec4a8;
+            --kira-text-primary: rgba(245,240,250,0.92);
+            --kira-text-secondary: rgba(245,240,250,0.45);
+            --kira-text-hint: rgba(245,240,250,0.2);
+            --kira-border: rgba(201,168,224,0.18);
+            --kira-border-focus: rgba(201,168,224,0.45);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-pill: 40px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: var(--kira-bg);
+            color: var(--kira-text-primary);
+            font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+            font-weight: 300;
+            line-height: 1.65;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* Background Glow Effects */
+        .bg-glow-top {
+            position: absolute;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(201,168,224,0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        
+        .bg-glow-bottom {
+            position: absolute;
+            bottom: -200px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(158,196,168,0.06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        
+        .container {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .header {
+            animation: fadeInUp 0.6s ease both;
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        
+        .app-title {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-weight: 300;
+            font-size: 48px;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+        
+        .app-subtitle {
+            color: var(--kira-text-secondary);
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .lang-toggle {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(201,168,224,0.1);
+            border: 0.5px solid rgba(201,168,224,0.35);
+            border-radius: var(--radius-pill);
+            padding: 8px 16px;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            color: var(--kira-lavender);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .lang-toggle:hover {
+            background: rgba(201,168,224,0.18);
+            border-color: rgba(201,168,224,0.6);
+            transform: translateY(-1px);
+        }
+        
+        .main-card {
+            animation: fadeInUp 0.6s ease 0.15s both;
+            background: rgba(201,168,224,0.04);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            margin-bottom: 24px;
+            text-align: center;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        
+        .session-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(158,196,168,0.06);
+            border: 0.5px solid rgba(158,196,168,0.15);
+            border-radius: var(--radius-pill);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: rgba(158,196,168,0.8);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--kira-sage);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .timer-display {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 72px;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            margin-bottom: 24px;
+            color: var(--kira-lavender);
+        }
+        
+        .session-type {
+            font-size: 18px;
+            color: var(--kira-text-secondary);
+            margin-bottom: 32px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 32px;
+        }
+        
+        .btn {
+            background: rgba(201,168,224,0.1);
+            border: 0.5px solid rgba(201,168,224,0.35);
+            border-radius: var(--radius-pill);
+            padding: 12px 28px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            color: var(--kira-lavender);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: none;
+        }
+        
+        .btn:hover {
+            background: rgba(201,168,224,0.18);
+            border-color: rgba(201,168,224,0.6);
+            transform: translateY(-1px);
+        }
+        
+        .btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .btn.primary {
+            background: rgba(201,168,224,0.15);
+            border-color: rgba(201,168,224,0.5);
+        }
+        
+        .progress {
+            width: 100%;
+            height: 2px;
+            background: rgba(201,168,224,0.1);
+            border-radius: 1px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--kira-lavender), var(--kira-sage));
+            width: 0%;
+            transition: width 1s ease;
+        }
+        
+        .ma-content {
+            animation: fadeInUp 0.6s ease 0.3s both;
+            display: none;
+            background: rgba(158,196,168,0.04);
+            border: 0.5px solid rgba(158,196,168,0.18);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .ma-content.active {
+            display: block;
+        }
+        
+        .ma-title {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 16px;
+            color: var(--kira-sage);
+        }
+        
+        .breathing-guide {
+            margin: 24px 0;
+        }
+        
+        .breath-circle {
+            width: 80px;
+            height: 80px;
+            border: 2px solid var(--kira-sage);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            opacity: 0.6;
+        }
+        
+        .breath-circle.breathing {
+            animation: breathe 4s infinite;
+        }
+        
+        .breath-instruction {
+            font-size: 14px;
+            color: var(--kira-text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .reflection-prompt {
+            background: rgba(158,196,168,0.06);
+            border: 0.5px solid rgba(158,196,168,0.15);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin: 16px 0;
+            font-style: italic;
+            color: var(--kira-text-secondary);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .reflection-prompt::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--kira-sage), var(--kira-lavender));
+            opacity: 0.4;
+        }
+        
+        .stats {
+            animation: fadeInUp 0.6s ease 0.45s both;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin-top: 32px;
+        }
+        
+        .stat-card {
+            background: var(--kira-surface);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-family: 'Space Mono', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--kira-lavender);
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: var(--kira-text-hint);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 4px;
+        }
+        
+        .divider {
+            width: 1px;
+            height: 32px;
+            background: linear-gradient(to bottom, transparent, rgba(201,168,224,0.25), transparent);
+            margin: 32px auto;
+        }
+        
+        .settings {
+            animation: fadeInUp 0.6s ease 0.6s both;
+            background: var(--kira-surface);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+        }
+        
+        .settings-title {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 20px;
+            font-weight: 300;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        .setting-group {
+            margin-bottom: 16px;
+        }
+        
+        .setting-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.25em;
+            color: var(--kira-lavender);
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .setting-input {
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            color: var(--kira-text-primary);
+            font-size: 14px;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        
+        .setting-input:focus {
+            outline: none;
+            border-color: var(--kira-border-focus);
+            background: var(--kira-surface-hover);
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 480px) {
+            .timer-display {
+                font-size: 56px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow-top"></div>
+    <div class="bg-glow-bottom"></div>
+    
+    <div class="container">
+        <header class="header">
+            <h1 class="app-title">
+                <span data-lang="en">PomodoroMA</span>
+                <span data-lang="ja" class="hidden">ポモドーロ間</span>
+            </h1>
+            <p class="app-subtitle">
+                <span data-lang="en">Focus timer embracing the meaningful pause</span>
+                <span data-lang="ja" class="hidden">意味のある間を大切にするフォーカスタイマー</span>
+            </p>
+            <button class="lang-toggle" onclick="toggleLanguage()">
+                <span id="lang-indicator">EN</span>
+            </button>
+        </header>
+        
+        <main>
+            <div class="main-card">
+                <div class="session-badge">
+                    <div class="status-dot"></div>
+                    <span id="session-status">
+                        <span data-lang="en">Ready to Focus</span>
+                        <span data-lang="ja" class="hidden">集中準備完了</span>
+                    </span>
+                </div>
+                
+                <div class="timer-display" id="timer-display">25:00</div>
+                
+                <div class="session-type" id="session-type">
+                    <span data-lang="en">Work Session</span>
+                    <span data-lang="ja" class="hidden">作業セッション</span>
+                </div>
+                
+                <div class="progress">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn primary" id="start-btn" onclick="toggleTimer()">
+                        <span data-lang="en">Start</span>
+                        <span data-lang="ja" class="hidden">開始</span>
+                    </button>
+                    <button class="btn" id="reset-btn" onclick="resetTimer()">
+                        <span data-lang="en">Reset</span>
+                        <span data-lang="ja" class="hidden">リセット</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="ma-content" id="ma-content">
+                <div class="ma-title">
+                    <span data-lang="en">間 (Ma) - The Meaningful Pause</span>
+                    <span data-lang="ja" class="hidden">間 - 意味のある休息</span>
+                </div>
+                
+                <div class="breathing-guide">
+                    <div class="breath-circle" id="breath-circle"></div>
+                    <div class="breath-instruction" id="breath-instruction">
+                        <span data-lang="en">Breathe deeply and find your center</span>
+                        <span data-lang="ja" class="hidden">深呼吸をして、心の中心を見つけてください</span>
+                    </div>
+                </div>
+                
+                <div class="reflection-prompt" id="reflection-prompt">
+                    <span data-lang="en">How did that session feel? What did you accomplish?</span>
+                    <span data-lang="ja" class="hidden">そのセッションはどうでしたか？何を達成しましたか？</span>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <span class="stat-number" id="sessions-today">0</span>
+                    <span class="stat-label">
+                        <span data-lang="en">Today</span>
+                        <span data-lang="ja" class="hidden">今日</span>
+                    </span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="total-sessions">0</span>
+                    <span class="stat-label">
+                        <span data-lang="en">Total</span>
+                        <span data-lang="ja" class="hidden">合計</span>
+                    </span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="current-streak">0</span>
+                    <span class="stat-label">
+                        <span data-lang="en">Streak</span>
+                        <span data-lang="ja" class="hidden">連続</span>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="settings">
+                <h3 class="settings-title">
+                    <span data-lang="en">Session Settings</span>
+                    <span data-lang="ja" class="hidden">セッション設定</span>
+                </h3>
+                
+                <div class="setting-group">
+                    <label class="setting-label" for="work-duration">
+                        <span data-lang="en">Work Duration (minutes)</span>
+                        <span data-lang="ja" class="hidden">作業時間（分）</span>
+                    </label>
+                    <input type="number" id="work-duration" class="setting-input" value="25" min="1" max="60">
+                </div>
+                
+                <div class="setting-group">
+                    <label class="setting-label" for="break-duration">
+                        <span data-lang="en">Ma Break Duration (minutes)</span>
+                        <span data-lang="ja" class="hidden">間の休息時間（分）</span>
+                    </label>
+                    <input type="number" id="break-duration" class="setting-input" value="5" min="1" max="15">
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // State management
+        let timer = {
+            minutes: 25,
+            seconds: 0,
+            isRunning: false,
+            isBreak: false,
+            sessionCount: 0,
+            totalTime: 25 * 60
+        };
+        
+        let stats = {
+            sessionsToday: parseInt(localStorage.getItem('pomodoro-sessions-today') || '0'),
+            totalSessions: parseInt(localStorage.getItem('pomodoro-total-sessions') || '0'),
+            currentStreak: parseInt(localStorage.getItem('pomodoro-current-streak') || '0'),
+            lastSessionDate: localStorage.getItem('pomodoro-last-session-date')
+        };
+        
+        let currentLanguage = localStorage.getItem('pomodoro-language') || 'en';
+        
+        let timerInterval;
+        let breathingInterval;
+        
+        // Reflection prompts
+        const reflectionPrompts = {
+            en: [
+                "How did that session feel? What did you accomplish?",
+                "What would you like to focus on in your next session?",
+                "Take a moment to appreciate your progress.",
+                "What insights emerged during your work?",
+                "How can you improve your next session?",
+                "What are you grateful for right now?",
+                "Notice how your body feels after focused work.",
+                "What intention will you set for the next session?"
+            ],
+            ja: [
+                "そのセッションはどうでしたか？何を達成しましたか？",
+                "次のセッションでは何に集中したいですか？",
+                "あなたの進歩を認めてください。",
+                "作業中にどんな気づきがありましたか？",
+                "次のセッションをどう改善できますか？",
+                "今、何に感謝していますか？",
+                "集中した後の体の感覚に気づいてください。",
+                "次のセッションにどんな意図を設定しますか？"
+            ]
+        };
+        
+        // Breathing instructions
+        const breathingInstructions = {
+            en: [
+                "Breathe deeply and find your center",
+                "Inhale slowly through your nose",
+                "Hold gently for a moment",
+                "Exhale slowly through your mouth",
+                "Feel your body relaxing",
+                "Let your mind settle"
+            ],
+            ja: [
+                "深呼吸をして、心の中心を見つけてください",
+                "鼻からゆっくりと息を吸ってください",
+                "少しの間、優しく息を保ってください",
+                "口からゆっくりと息を吐いてください",
+                "体がリラックスするのを感じてください",
+                "心を落ち着かせてください"
+            ]
+        };
+        
+        // Initialize app
+        function init() {
+            updateDisplay();
+            updateStats();
+            setLanguage(currentLanguage);
+            
+            // Load settings
+            document.getElementById('work-duration').value = localStorage.getItem('pomodoro-work-duration') || '25';
+            document.getElementById('break-duration').value = localStorage.getItem('pomodoro-break-duration') || '5';
+            
+            // Add event listeners for settings
+            document.getElementById('work-duration').addEventListener('change', saveSettings);
+            document.getElementById('break-duration').addEventListener('change', saveSettings);
+            
+            // Check if it's a new day
+            const today = new Date().toDateString();
+            if (stats.lastSessionDate !== today) {
+                stats.sessionsToday = 0;
+                updateStats();
+            }
+        }
+        
+        function toggleTimer() {
+            if (timer.isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+        
+        function startTimer() {
+            timer.isRunning = true;
+            document.getElementById('start-btn').innerHTML = `
+                <span data-lang="en">Pause</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">一時停止</span>
+            `;
+            
+            document.getElementById('session-status').innerHTML = timer.isBreak ? `
+                <span data-lang="en">Ma Break</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">間の休息</span>
+            ` : `
+                <span data-lang="en">Focusing</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">集中中</span>
+            `;
+            
+            if (timer.isBreak) {
+                startBreakActivities();
+            }
+            
+            timerInterval = setInterval(() => {
+                if (timer.seconds > 0) {
+                    timer.seconds--;
+                } else if (timer.minutes > 0) {
+                    timer.minutes--;
+                    timer.seconds = 59;
+                } else {
+                    completeSession();
+                }
+                
+                updateDisplay();
+                updateProgress();
+            }, 1000);
+        }
+        
+        function pauseTimer() {
+            timer.isRunning = false;
+            clearInterval(timerInterval);
+            clearInterval(breathingInterval);
+            
+            document.getElementById('start-btn').innerHTML = `
+                <span data-lang="en">Start</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">開始</span>
+            `;
+            
+            document.getElementById('session-status').innerHTML = `
+                <span data-lang="en">Paused</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">一時停止</span>
+            `;
+            
+            document.getElementById('breath-circle').classList.remove('breathing');
+        }
+        
+        function resetTimer() {
+            pauseTimer();
+            
+            const workDuration = parseInt(document.getElementById('work-duration').value);
+            const breakDuration = parseInt(document.getElementById('break-duration').value);
+            
+            timer.minutes = timer.isBreak ? breakDuration : workDuration;
+            timer.seconds = 0;
+            timer.totalTime = timer.minutes * 60;
+            
+            document.getElementById('session-status').innerHTML = timer.isBreak ? `
+                <span data-lang="en">Ready for Ma</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">間の準備完了</span>
+            ` : `
+                <span data-lang="en">Ready to Focus</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">集中準備完了</span>
+            `;
+            
+            document.getElementById('ma-content').classList.remove('active');
+            
+            updateDisplay();
+            updateProgress();
+        }
+        
+        function completeSession() {
+            clearInterval(timerInterval);
+            clearInterval(breathingInterval);
+            
+            if (!timer.isBreak) {
+                // Completed work session
+                timer.sessionCount++;
+                stats.sessionsToday++;
+                stats.totalSessions++;
+                stats.currentStreak++;
+                stats.lastSessionDate = new Date().toDateString();
+                
+                updateStats();
+                saveStats();
+                
+                // Start break
+                timer.isBreak = true;
+                const breakDuration = parseInt(document.getElementById('break-duration').value);
+                timer.minutes = breakDuration;
+                timer.seconds = 0;
+                timer.totalTime = breakDuration * 60;
+                
+                document.getElementById('session-type').innerHTML = `
+                    <span data-lang="en">Ma Break - Meaningful Pause</span>
+                    <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">間の休息 - 意味のある時間</span>
+                `;
+                
+                showMaContent();
+            } else {
+                // Completed break
+                timer.isBreak = false;
+                const workDuration = parseInt(document.getElementById('work-duration').value);
+                timer.minutes = workDuration;
+                timer.seconds = 0;
+                timer.totalTime = workDuration * 60;
+                
+                document.getElementById('session-type').innerHTML = `
+                    <span data-lang="en">Work Session</span>
+                    <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">作業セッション</span>
+                `;
+                
+                document.getElementById('ma-content').classList.remove('active');
+            }
+            
+            timer.isRunning = false;
+            document.getElementById('start-btn').innerHTML = `
+                <span data-lang="en">Start</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">開始</span>
+            `;
+            
+            document.getElementById('session-status').innerHTML = timer.isBreak ? `
+                <span data-lang="en">Ready for Ma</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">間の準備完了</span>
+            ` : `
+                <span data-lang="en">Ready to Focus</span>
+                <span data-lang="ja" class="${currentLanguage === 'ja' ? '' : 'hidden'}">集中準備完了</span>
+            `;
+            
+            updateDisplay();
+            updateProgress();
+        }
+        
+        function showMaContent() {
+            document.getElementById('ma-content').classList.add('active');
+            
+            // Show random reflection prompt
+            const prompts = reflectionPrompts[currentLanguage];
+            const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+            document.getElementById('reflection-prompt').textContent = randomPrompt;
+        }
+        
+        function startBreakActivities() {
+            document.getElementById('breath-circle').classList.add('breathing');
+            
+            // Cycle through breathing instructions
+            let instructionIndex = 0;
+            const instructions = breathingInstructions[currentLanguage];
+            
+            function updateBreathingInstruction() {
+                document.getElementById('breath-instruction').textContent = instructions[instructionIndex];
+                instructionIndex = (instructionIndex + 1) % instructions.length;
+            }
+            
+            updateBreathingInstruction();
+            breathingInterval = setInterval(updateBreathingInstruction, 6000);
+        }
+        
+        function updateDisplay() {
+            const display = String(timer.minutes).padStart(2, '0') + ':' + String(timer.seconds).padStart(2, '0');
+            document.getElementById('timer-display').textContent = display;
+        }
+        
+        function updateProgress() {
+            const totalSeconds = timer.minutes * 60 + timer.seconds;
+            const progress = ((timer.totalTime - totalSeconds) / timer.totalTime) * 100;
+            document.getElementById('progress-bar').style.width = Math.max(0, progress) + '%';
+        }
+        
+        function updateStats() {
+            document.getElementById('sessions-today').textContent = stats.sessionsToday;
+            document.getElementById('total-sessions').textContent = stats.totalSessions;
+            document.getElementById('current-streak').textContent = stats.currentStreak;
+        }
+        
+        function saveStats() {
+            localStorage.setItem('pomodoro-sessions-today', stats.sessionsToday.toString());
+            localStorage.setItem('pomodoro-total-sessions', stats.totalSessions.toString());
+            localStorage.setItem('pomodoro-current-streak', stats.currentStreak.toString());
+            localStorage.setItem('pomodoro-last-session-date', stats.lastSessionDate);
+        }
+        
+        function saveSettings() {
+            localStorage.setItem('pomodoro-work-duration', document.getElementById('work-duration').value);
+            localStorage.setItem('pomodoro-break-duration', document.getElementById('break-duration').value);
+        }
+        
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'en' ? 'ja' : 'en';
+            setLanguage(currentLanguage);
+            localStorage.setItem('pomodoro-language', currentLanguage);
+        }
+        
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                if (el.getAttribute('data-lang') === lang) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+            
+            document.getElementById('lang-indicator').textContent = lang.toUpperCase();
+            
+            // Update breathing instruction if break is active
+            if (timer.isBreak && document.getElementById('ma-content').classList.contains('active')) {
+                const instructions = breathingInstructions[lang];
+                document.getElementById('breath-instruction').textContent = instructions[0];
+            }
+        }
+        
+        // Initialize app on page load
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // Prevent page refresh during timer
+        window.addEventListener('beforeunload', function(e) {
+            if (timer.isRunning) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+    
+    <!-- Kira Feedback Widget -->
+    <div id="kira-feedback" style="position:fixed;bottom:16px;right:16px;z-index:9999;">
+      <button id="kira-fb-btn" onclick="document.getElementById('kira-fb-form').style.display=document.getElementById('kira-fb-form').style.display==='none'?'flex':'none'" style="background:rgba(201,168,224,0.12);border:0.5px solid rgba(201,168,224,0.3);border-radius:40px;padding:8px 16px;color:rgba(245,240,250,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;">Feedback</button>
+      <form id="kira-fb-form" style="display:none;flex-direction:column;gap:8px;margin-top:8px;background:rgba(11,11,15,0.95);border:0.5px solid rgba(201,168,224,0.2);border-radius:12px;padding:16px;min-width:240px;" onsubmit="return kiraSubmitFeedback(event)">
+        <select id="kira-fb-type" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;">
+          <option value="love">Love it</option><option value="bug">Bug report</option><option value="idea">Feature idea</option><option value="other">Other</option>
+        </select>
+        <textarea id="kira-fb-msg" placeholder="Your thoughts..." rows="3" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;resize:vertical;"></textarea>
+        <button type="submit" style="background:rgba(201,168,224,0.1);border:0.5px solid rgba(201,168,224,0.35);border-radius:40px;padding:8px;color:#c9a8e0;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.15em;cursor:pointer;text-transform:uppercase;">Send</button>
+        <div id="kira-fb-status" style="font-size:11px;color:rgba(245,240,250,0.5);text-align:center;"></div>
+      </form>
+    </div>
+    
+    
+    <script>
+    function kiraSubmitFeedback(e){
+      e.preventDefault();
+      var type=document.getElementById('kira-fb-type').value;
+      var msg=document.getElementById('kira-fb-msg').value.trim();
+      if(!msg){document.getElementById('kira-fb-status').textContent='Please write something';return false;}
+      var APP_NAME=document.title||location.pathname.split('/').filter(Boolean).pop()||'unknown';
+      var url='https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_feedback';
+      fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{
+        app_name:{stringValue:APP_NAME},type:{stringValue:type},message:{stringValue:msg.substring(0,1000)},
+        url:{stringValue:location.href.substring(0,200)},timestamp:{stringValue:new Date().toISOString()}
+      }})}).then(function(){
+        document.getElementById('kira-fb-status').textContent='Thank you!';
+        document.getElementById('kira-fb-msg').value='';
+        setTimeout(function(){document.getElementById('kira-fb-form').style.display='none';document.getElementById('kira-fb-status').textContent='';},2000);
+      }).catch(function(){document.getElementById('kira-fb-status').textContent='Failed to send';});
+      return false;
+    }
+    </script>
+</body>
+</html>
