@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConversationStarter</title>
+    
+    <!-- Kira Error Reporter: JSエラーを自動検知してFirestoreに送信 -->
+    <script>
+    (function(){
+      var APP_NAME = document.title || location.pathname.split('/').filter(Boolean).pop() || 'unknown';
+      var FIRESTORE_URL = 'https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_errors';
+      var reported = {};
+      function report(msg, source, line, col, err) {
+        var key = msg + ':' + (line||0);
+        if (reported[key]) return;
+        reported[key] = true;
+        try {
+          fetch(FIRESTORE_URL, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({fields:{
+              app_name:{stringValue:APP_NAME},
+              message:{stringValue:String(msg).substring(0,500)},
+              source:{stringValue:String(source||'').substring(0,200)},
+              line:{integerValue:String(line||0)},
+              user_agent:{stringValue:navigator.userAgent.substring(0,200)},
+              url:{stringValue:location.href.substring(0,200)},
+              timestamp:{stringValue:new Date().toISOString()}
+            }})
+          }).catch(function(){});
+        } catch(e){}
+      }
+      window.onerror = report;
+      window.addEventListener('unhandledrejection', function(e){ report('Unhandled rejection: '+(e.reason||''),'',0,0,null); });
+    })();
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Space+Mono:wght@400&family=Zen+Kaku+Gothic+New:wght@300;400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --kira-bg: #0b0b0f;
+            --kira-surface: rgba(255,255,255,0.03);
+            --kira-surface-hover: rgba(255,255,255,0.06);
+            --kira-coral: #f07a6a;
+            --kira-lime: #aadc78;
+            --kira-text-primary: rgba(245,240,250,0.92);
+            --kira-text-secondary: rgba(245,240,250,0.45);
+            --kira-text-hint: rgba(245,240,250,0.2);
+            --kira-border: rgba(240,122,106,0.18);
+            --kira-border-focus: rgba(240,122,106,0.45);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-pill: 40px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: var(--kira-bg);
+            color: var(--kira-text-primary);
+            font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+            font-weight: 300;
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        .background-glow {
+            position: absolute;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(240,122,106,0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .background-glow-bottom {
+            position: absolute;
+            bottom: -200px;
+            right: 20%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(170,220,120,0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+            animation: fadeInUp 0.6s ease both;
+        }
+        
+        .eyebrow {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.25em;
+            color: var(--kira-coral);
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-bottom: 8px;
+        }
+        
+        .title {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 300;
+            font-size: 48px;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+        
+        .subtitle {
+            color: var(--kira-text-secondary);
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .japanese-subtitle {
+            font-size: 14px;
+            color: var(--kira-text-hint);
+            font-style: italic;
+        }
+        
+        .lang-toggle {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(240,122,106,0.1);
+            border: 0.5px solid rgba(240,122,106,0.35);
+            border-radius: var(--radius-pill);
+            padding: 10px 28px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            color: var(--kira-coral);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .lang-toggle:hover {
+            background: rgba(240,122,106,0.18);
+            border-color: rgba(240,122,106,0.6);
+            transform: translateY(-1px);
+        }
+        
+        .controls {
+            margin-bottom: 32px;
+            animation: fadeInUp 0.6s ease 0.15s both;
+        }
+        
+        .control-section {
+            background: rgba(240,122,106,0.04);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 16px;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        
+        .control-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            color: var(--kira-coral);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            opacity: 0.8;
+        }
+        
+        .situation-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        
+        .situation-btn {
+            background: var(--kira-surface);
+            border: 0.5px solid rgba(240,122,106,0.25);
+            border-radius: var(--radius-pill);
+            padding: 12px 24px;
+            color: var(--kira-text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .situation-btn.active {
+            background: rgba(240,122,106,0.12);
+            border-color: var(--kira-border-focus);
+            color: var(--kira-coral);
+            transform: translateY(-1px);
+        }
+        
+        .situation-btn:hover:not(.active) {
+            background: var(--kira-surface-hover);
+            border-color: rgba(240,122,106,0.35);
+        }
+        
+        .sensitivity-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .sensitivity-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: var(--kira-surface);
+            border: 0.5px solid var(--kira-border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            background: var(--kira-text-hint);
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+        
+        .toggle-switch.active {
+            background: rgba(240,122,106,0.1);
+            border-color: var(--kira-coral);
+        }
+        
+        .toggle-switch.active::after {
+            left: 22px;
+            background: var(--kira-coral);
+        }
+        
+        .toggle-label {
+            font-size: 13px;
+            color: var(--kira-text-secondary);
+        }
+        
+        .prompt-area {
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+        
+        .prompt-card {
+            background: rgba(240,122,106,0.04);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            min-height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .prompt-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--kira-coral), var(--kira-lime));
+            opacity: 0.4;
+        }
+        
+        .prompt-text {
+            font-size: 18px;
+            line-height: 1.7;
+            color: var(--kira-text-primary);
+            max-width: 480px;
+        }
+        
+        .prompt-meta {
+            position: absolute;
+            bottom: 16px;
+            left: 24px;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            color: var(--kira-text-hint);
+            text-transform: uppercase;
+        }
+        
+        .generate-btn {
+            display: block;
+            width: 100%;
+            background: rgba(240,122,106,0.1);
+            border: 0.5px solid rgba(240,122,106,0.35);
+            border-radius: var(--radius-pill);
+            padding: 16px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            color: var(--kira-coral);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .generate-btn:hover {
+            background: rgba(240,122,106,0.18);
+            border-color: rgba(240,122,106,0.6);
+            transform: translateY(-1px);
+        }
+        
+        .generate-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .divider {
+            width: 1px;
+            height: 32px;
+            background: linear-gradient(to bottom, transparent, rgba(240,122,106,0.25), transparent);
+            margin: 32px auto;
+        }
+        
+        .new-entry {
+            animation: fadeIn 0.4s ease;
+        }
+        
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(12px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(8px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .container {
+                padding: 32px 16px;
+            }
+            
+            .title {
+                font-size: 36px;
+            }
+            
+            .sensitivity-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .lang-toggle {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 0 auto 24px;
+                display: table;
+            }
+        }
+        
+        [data-lang] {
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-glow"></div>
+    <div class="background-glow-bottom"></div>
+    
+    <button class="lang-toggle" onclick="toggleLanguage()" id="langToggle">
+        <span data-lang="en">日本語</span>
+        <span data-lang="ja" style="display:none">English</span>
+    </button>
+    
+    <div class="container">
+        <header class="header">
+            <div class="eyebrow">
+                <span data-lang="en">Social Connection</span>
+                <span data-lang="ja" style="display:none">社会的つながり</span>
+            </div>
+            <h1 class="title">
+                <span data-lang="en">Conversation<em>Starter</em></span>
+                <span data-lang="ja" style="display:none">会話の<em>きっかけ</em></span>
+            </h1>
+            <p class="subtitle">
+                <span data-lang="en">Break the ice with contextual conversation prompts</span>
+                <span data-lang="ja" style="display:none">文脈に応じた会話のきっかけで氷を溶かそう</span>
+            </p>
+            <p class="japanese-subtitle">
+                <span data-lang="en">つながりは、一言から始まる。</span>
+                <span data-lang="ja" style="display:none">Connections begin with a single word.</span>
+            </p>
+        </header>
+        
+        <div class="controls">
+            <div class="control-section">
+                <div class="control-label">
+                    <span data-lang="en">Situation</span>
+                    <span data-lang="ja" style="display:none">状況</span>
+                </div>
+                <div class="situation-buttons">
+                    <button class="situation-btn active" data-situation="gym" onclick="selectSituation('gym')">
+                        <span data-lang="en">🏋️ Gym</span>
+                        <span data-lang="ja" style="display:none">🏋️ ジム</span>
+                    </button>
+                    <button class="situation-btn" data-situation="coffee" onclick="selectSituation('coffee')">
+                        <span data-lang="en">☕ Coffee Shop</span>
+                        <span data-lang="ja" style="display:none">☕ カフェ</span>
+                    </button>
+                    <button class="situation-btn" data-situation="coworking" onclick="selectSituation('coworking')">
+                        <span data-lang="en">💻 Co-working</span>
+                        <span data-lang="ja" style="display:none">💻 コワーキング</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <div class="control-label">
+                    <span data-lang="en">Cultural Settings</span>
+                    <span data-lang="ja" style="display:none">文化的設定</span>
+                </div>
+                <div class="sensitivity-controls">
+                    <div class="sensitivity-toggle">
+                        <div class="toggle-switch" id="formalToggle" onclick="toggleSetting('formal')"></div>
+                        <span class="toggle-label">
+                            <span data-lang="en">Formal tone</span>
+                            <span data-lang="ja" style="display:none">丁寧な口調</span>
+                        </span>
+                    </div>
+                    <div class="sensitivity-toggle">
+                        <div class="toggle-switch active" id="culturalToggle" onclick="toggleSetting('cultural')"></div>
+                        <span class="toggle-label">
+                            <span data-lang="en">Culture-aware</span>
+                            <span data-lang="ja" style="display:none">文化的配慮</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="prompt-area">
+            <div class="prompt-card">
+                <div class="prompt-text" id="promptText">
+                    <span data-lang="en">Click "Generate New Prompt" to get conversation starters for your selected situation.</span>
+                    <span data-lang="ja" style="display:none">「新しいプロンプトを生成」をクリックして、選択した状況での会話のきっかけを取得しましょう。</span>
+                </div>
+                <div class="prompt-meta" id="promptMeta">
+                    <span data-lang="en">Ready to connect</span>
+                    <span data-lang="ja" style="display:none">つながる準備完了</span>
+                </div>
+            </div>
+            
+            <button class="generate-btn" onclick="generatePrompt()">
+                <span data-lang="en">Generate New Prompt</span>
+                <span data-lang="ja" style="display:none">新しいプロンプトを生成</span>
+            </button>
+        </div>
+        
+        <div class="divider"></div>
+    </div>
+    
+    <!-- Kira Feedback Widget: ユーザーからのフィードバックをFirestoreに送信 -->
+    <div id="kira-feedback" style="position:fixed;bottom:16px;right:16px;z-index:9999;">
+      <button id="kira-fb-btn" onclick="document.getElementById('kira-fb-form').style.display=document.getElementById('kira-fb-form').style.display==='none'?'flex':'none'" style="background:rgba(201,168,224,0.12);border:0.5px solid rgba(201,168,224,0.3);border-radius:40px;padding:8px 16px;color:rgba(245,240,250,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;">Feedback</button>
+      <form id="kira-fb-form" style="display:none;flex-direction:column;gap:8px;margin-top:8px;background:rgba(11,11,15,0.95);border:0.5px solid rgba(201,168,224,0.2);border-radius:12px;padding:16px;min-width:240px;" onsubmit="return kiraSubmitFeedback(event)">
+        <select id="kira-fb-type" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;">
+          <option value="love">Love it</option><option value="bug">Bug report</option><option value="idea">Feature idea</option><option value="other">Other</option>
+        </select>
+        <textarea id="kira-fb-msg" placeholder="Your thoughts..." rows="3" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;resize:vertical;"></textarea>
+        <button type="submit" style="background:rgba(201,168,224,0.1);border:0.5px solid rgba(201,168,224,0.35);border-radius:40px;padding:8px;color:#c9a8e0;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.15em;cursor:pointer;text-transform:uppercase;">Send</button>
+        <div id="kira-fb-status" style="font-size:11px;color:rgba(245,240,250,0.5);text-align:center;"></div>
+      </form>
+    </div>
+    
+    <script>
+    let currentLang = 'en';
+    let settings = {
+        situation: 'gym',
+        formal: false,
+        cultural: true
+    };
+    
+    const prompts = {
+        gym: {
+            en: {
+                casual: [
+                    "Mind if I ask about your workout routine? I'm always looking for new ideas.",
+                    "That's an impressive setup you have there. How long have you been training?",
+                    "I couldn't help but notice your form on that exercise. Any tips?",
+                    "This place gets busy around this time, doesn't it? Do you usually come in the mornings?",
+                    "I'm trying to get into a better routine. What keeps you motivated to come regularly?"
+                ],
+                formal: [
+                    "Excuse me, I hope you don't mind me asking about your training approach. It looks very structured.",
+                    "I apologize for interrupting, but I was wondering if you might have any advice for someone starting out.",
+                    "Would you mind if I asked about your experience with this particular equipment?",
+                    "I hope this isn't too forward, but I've noticed you have excellent technique. Might you have any recommendations?",
+                    "Pardon me, but I was curious about your fitness journey. How did you develop such discipline?"
+                ]
+            },
+            ja: {
+                casual: [
+                    "すみません、そのワークアウト、すごく効果的に見えますね。参考にさせてもらえますか？",
+                    "失礼ですが、そのトレーニング方法、どこで学ばれたんですか？",
+                    "このマシン、使い方がよくわからなくて...コツとかありますか？",
+                    "この時間帯、いつも混みますよね。普段はいつ頃来られるんですか？",
+                    "継続するのって大変ですよね。モチベーション保つ秘訣とかありますか？"
+                ],
+                formal: [
+                    "恐れ入りますが、そちらのトレーニング方法について教えていただけませんでしょうか。",
+                    "お忙しい中申し訳ございませんが、初心者へのアドバイスをいただけますでしょうか。",
+                    "失礼いたします。そちらの器具の使用方法について、ご指導いただけますでしょうか。",
+                    "恐縮ですが、あなた様のフォームが非常に美しく、ぜひ参考にさせていただきたく。",
+                    "お疲れ様です。継続的なトレーニングの秘訣について、ご教授いただけますでしょうか。"
+                ]
+            }
+        },
+        coffee: {
+            en: {
+                casual: [
+                    "I love coming here to work. Do you find it as productive as I do?",
+                    "That book looks interesting! I'm always looking for good recommendations.",
+                    "The coffee here is amazing, isn't it? Have you tried their new blend?",
+                    "I couldn't help but notice you're working on something creative. Mind if I ask what it is?",
+                    "This is such a cozy spot. Do you come here often to work or just to relax?"
+                ],
+                formal: [
+                    "Excuse me, I hope you don't mind my mentioning, but this seems like such a wonderful workspace.",
+                    "I apologize for the interruption, but I was curious about what you're reading.",
+                    "Would you mind if I asked for your recommendation on the menu here?",
+                    "I hope this isn't presumptuous, but your work setup looks very interesting.",
+                    "Pardon me, but I was wondering if you might have any suggestions for good work spots in the area."
+                ]
+            },
+            ja: {
+                casual: [
+                    "ここの雰囲気、すごく集中できますよね。よく来られるんですか？",
+                    "その本、面白そうですね！タイトル教えてもらえますか？",
+                    "ここのコーヒー、本当に美味しいですよね。おすすめのメニューとかありますか？",
+                    "お疲れ様です。何かクリエイティブなお仕事されてるんですか？",
+                    "この席、お気に入りなんです。ここで作業すること多いですか？"
+                ],
+                formal: [
+                    "恐れ入ります。こちらでよくお仕事をされているのでしょうか。",
+                    "失礼いたします。読まれている本が興味深く、タイトルを教えていただけますでしょうか。",
+                    "恐縮ですが、こちらのメニューでおすすめがございましたら教えていただけますでしょうか。",
+                    "お忙しい中申し訳ございません。そちらのお仕事について、差し支えなければお聞かせください。",
+                    "失礼いたします。この辺りで作業に適した場所をご存知でしたら、教えていただけませんでしょうか。"
+                ]
+            }
+        },
+        coworking: {
+            en: {
+                casual: [
+                    "Hey there! New to this space? I'm always happy to help people get oriented.",
+                    "I love the energy here. What kind of work brings you to co-working spaces?",
+                    "Mind if I ask what you're working on? The creative energy here is always inspiring.",
+                    "Are you part of the community events here? There are some great networking opportunities.",
+                    "I've been working here for a while. Let me know if you need any tips about the space!"
+                ],
+                formal: [
+                    "Good afternoon, I don't believe we've met. I'm a regular member here and wanted to welcome you.",
+                    "Excuse me, I hope you're finding the facilities here suitable for your work needs.",
+                    "Would you mind if I asked about your professional background? I'm always interested in connecting with fellow entrepreneurs.",
+                    "I wanted to introduce myself and mention some of the community resources available here.",
+                    "Please don't hesitate to reach out if you need any guidance about the workspace amenities."
+                ]
+            },
+            ja: {
+                casual: [
+                    "お疲れ様です！初めてですか？何かわからないことあったら聞いてくださいね。",
+                    "ここの雰囲気、いいですよね。どんなお仕事されてるんですか？",
+                    "何か面白いプロジェクトに取り組んでるんですか？いつも刺激を受けています。",
+                    "コミュニティイベント、参加されたことありますか？なかなか楽しいですよ。",
+                    "ここ、もう長く使ってるんです。何かあったら気軽に声かけてください！"
+                ],
+                formal: [
+                    "お疲れ様です。初めてお見かけいたしましたが、こちらのメンバーでいらっしゃいますか。",
+                    "恐れ入ります。こちらの環境はお仕事に適していらっしゃいますでしょうか。",
+                    "失礼いたします。どちらでご活動されているか、差し支えなければお聞かせください。",
+                    "ご挨拶させていただきたく。こちらのコミュニティについてご案内できることがございます。",
+                    "何かご不明な点やお手伝いできることがございましたら、お気軽にお声がけください。"
+                ]
+            }
+        }
+    };
+    
+    function toggleLanguage() {
+        currentLang = currentLang === 'en' ? 'ja' : 'en';
+        updateLanguageDisplay();
+    }
+    
+    function updateLanguageDisplay() {
+        const enElements = document.querySelectorAll('[data-lang="en"]');
+        const jaElements = document.querySelectorAll('[data-lang="ja"]');
+        
+        enElements.forEach(el => {
+            el.style.display = currentLang === 'en' ? '' : 'none';
+        });
+        
+        jaElements.forEach(el => {
+            el.style.display = currentLang === 'ja' ? '' : 'none';
+        });
+    }
+    
+    function selectSituation(situation) {
+        settings.situation = situation;
+        
+        document.querySelectorAll('.situation-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        document.querySelector(`[data-situation="${situation}"]`).classList.add('active');
+    }
+    
+    function toggleSetting(setting) {
+        settings[setting] = !settings[setting];
+        const toggle = document.getElementById(setting + 'Toggle');
+        
+        if (settings[setting]) {
+            toggle.classList.add('active');
+        } else {
+            toggle.classList.remove('active');
+        }
+    }
+    
+    function generatePrompt() {
+        const situation = settings.situation;
+        const tone = settings.formal ? 'formal' : 'casual';
+        const lang = currentLang;
+        
+        const promptArray = prompts[situation][lang][tone];
+        const randomPrompt = promptArray[Math.floor(Math.random() * promptArray.length)];
+        
+        const promptCard = document.querySelector('.prompt-card');
+        const promptText = document.getElementById('promptText');
+        const promptMeta = document.getElementById('promptMeta');
+        
+        // Add animation class
+        promptCard.classList.add('new-entry');
+        
+        // Update content
+        promptText.textContent = randomPrompt;
+        
+        const metaText = {
+            en: {
+                gym: 'Fitness conversation',
+                coffee: 'Café interaction',
+                coworking: 'Professional networking'
+            },
+            ja: {
+                gym: 'フィットネス会話',
+                coffee: 'カフェでの交流',
+                coworking: 'プロネットワーキング'
+            }
+        };
+        
+        promptMeta.textContent = metaText[lang][situation];
+        
+        // Remove animation class after animation completes
+        setTimeout(() => {
+            promptCard.classList.remove('new-entry');
+        }, 400);
+    }
+    
+    function kiraSubmitFeedback(e){
+      e.preventDefault();
+      var type=document.getElementById('kira-fb-type').value;
+      var msg=document.getElementById('kira-fb-msg').value.trim();
+      if(!msg){document.getElementById('kira-fb-status').textContent='Please write something';return false;}
+      var APP_NAME=document.title||location.pathname.split('/').filter(Boolean).pop()||'unknown';
+      var url='https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_feedback';
+      fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{
+        app_name:{stringValue:APP_NAME},type:{stringValue:type},message:{stringValue:msg.substring(0,1000)},
+        url:{stringValue:location.href.substring(0,200)},timestamp:{stringValue:new Date().toISOString()}
+      }})}).then(function(){
+        document.getElementById('kira-fb-status').textContent='Thank you!';
+        document.getElementById('kira-fb-msg').value='';
+        setTimeout(function(){document.getElementById('kira-fb-form').style.display='none';document.getElementById('kira-fb-status').textContent='';},2000);
+      }).catch(function(){document.getElementById('kira-fb-status').textContent='Failed to send';});
+      return false;
+    }
+    
+    // Initialize
+    updateLanguageDisplay();
+    </script>
+</body>
+</html>
