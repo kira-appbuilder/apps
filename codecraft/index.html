@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeCraft</title>
+    
+    <!-- Kira Error Reporter -->
+    <script>
+    (function(){
+      var APP_NAME = document.title || location.pathname.split('/').filter(Boolean).pop() || 'unknown';
+      var FIRESTORE_URL = 'https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_errors';
+      var reported = {};
+      function report(msg, source, line, col, err) {
+        var key = msg + ':' + (line||0);
+        if (reported[key]) return;
+        reported[key] = true;
+        try {
+          fetch(FIRESTORE_URL, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({fields:{
+              app_name:{stringValue:APP_NAME},
+              message:{stringValue:String(msg).substring(0,500)},
+              source:{stringValue:String(source||'').substring(0,200)},
+              line:{integerValue:String(line||0)},
+              user_agent:{stringValue:navigator.userAgent.substring(0,200)},
+              url:{stringValue:location.href.substring(0,200)},
+              timestamp:{stringValue:new Date().toISOString()}
+            }})
+          }).catch(function(){});
+        } catch(e){}
+      }
+      window.onerror = report;
+      window.addEventListener('unhandledrejection', function(e){ report('Unhandled rejection: '+(e.reason||''),'',0,0,null); });
+    })();
+    </script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@300;400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --kira-bg: #0b0b0f;
+            --kira-surface: rgba(255,255,255,0.03);
+            --kira-surface-hover: rgba(255,255,255,0.06);
+            
+            --kira-cyan: #7de8e8;
+            --kira-blue: #6ab0f5;
+            
+            --kira-text-primary: rgba(245,240,250,0.92);
+            --kira-text-secondary: rgba(245,240,250,0.45);
+            --kira-text-hint: rgba(245,240,250,0.2);
+            
+            --kira-border: rgba(125, 232, 232, 0.18);
+            --kira-border-focus: rgba(125, 232, 232, 0.45);
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-pill: 40px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: var(--kira-bg);
+            color: var(--kira-text-primary);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-weight: 300;
+            line-height: 1.65;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Background glow effects */
+        .bg-glow-top {
+            position: absolute;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(125, 232, 232, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .bg-glow-bottom {
+            position: absolute;
+            bottom: -200px;
+            right: -200px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(ellipse, rgba(106, 176, 245, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+            animation: fadeInUp 0.6s ease both;
+        }
+        
+        .header h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 48px;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--kira-cyan), var(--kira-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header .subtitle {
+            font-size: 16px;
+            color: var(--kira-text-secondary);
+            margin-bottom: 24px;
+        }
+        
+        .header .subtitle-jp {
+            font-size: 14px;
+            color: var(--kira-text-hint);
+            font-style: italic;
+        }
+        
+        .lang-toggle {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(125, 232, 232, 0.1);
+            border: 0.5px solid rgba(125, 232, 232, 0.35);
+            border-radius: var(--radius-pill);
+            padding: 8px 16px;
+            color: var(--kira-cyan);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        
+        .lang-toggle:hover {
+            background: rgba(125, 232, 232, 0.18);
+            border-color: rgba(125, 232, 232, 0.6);
+            transform: translateY(-1px);
+        }
+        
+        .add-section {
+            background: rgba(125, 232, 232, 0.04);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 32px;
+            transition: border-color 0.3s, background 0.3s;
+            animation: fadeInUp 0.6s ease 0.15s both;
+        }
+        
+        .add-section:focus-within {
+            border-color: var(--kira-border-focus);
+            background: rgba(125, 232, 232, 0.06);
+        }
+        
+        .add-section h3 {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.25em;
+            color: var(--kira-cyan);
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-bottom: 16px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .form-group {
+            flex: 1;
+        }
+        
+        .form-group.half {
+            flex: 0.5;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            background: var(--kira-surface);
+            border: 0.5px solid rgba(125, 232, 232, 0.12);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            color: var(--kira-text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--kira-border-focus);
+        }
+        
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .btn {
+            background: rgba(125, 232, 232, 0.1);
+            border: 0.5px solid rgba(125, 232, 232, 0.35);
+            border-radius: var(--radius-pill);
+            padding: 12px 28px;
+            color: var(--kira-cyan);
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: rgba(125, 232, 232, 0.18);
+            border-color: rgba(125, 232, 232, 0.6);
+            transform: translateY(-1px);
+        }
+        
+        .btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .search-section {
+            margin-bottom: 32px;
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+        
+        .search-bar {
+            background: var(--kira-surface);
+            border: 0.5px solid var(--kira-border);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .search-bar:focus-within {
+            border-color: var(--kira-border-focus);
+        }
+        
+        .snippets-section {
+            animation: fadeInUp 0.6s ease 0.45s both;
+        }
+        
+        .snippet-card {
+            background: rgba(106, 176, 245, 0.04);
+            border: 0.5px solid rgba(106, 176, 245, 0.18);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        
+        .snippet-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--kira-cyan), var(--kira-blue));
+            opacity: 0.4;
+        }
+        
+        .snippet-card:hover {
+            transform: translateY(-1px);
+            border-color: rgba(106, 176, 245, 0.35);
+        }
+        
+        .snippet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .snippet-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 20px;
+            font-weight: 300;
+            margin: 0;
+        }
+        
+        .snippet-lang {
+            background: rgba(106, 176, 245, 0.06);
+            border: 0.5px solid rgba(106, 176, 245, 0.15);
+            border-radius: var(--radius-pill);
+            padding: 4px 12px;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: rgba(106, 176, 245, 0.8);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        
+        .snippet-code {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            margin: 12px 0;
+            overflow-x: auto;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .snippet-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .tag {
+            background: rgba(125, 232, 232, 0.06);
+            border: 0.5px solid rgba(125, 232, 232, 0.15);
+            border-radius: var(--radius-pill);
+            padding: 4px 10px;
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            color: rgba(125, 232, 232, 0.7);
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tag:hover {
+            background: rgba(125, 232, 232, 0.12);
+            border-color: rgba(125, 232, 232, 0.3);
+        }
+        
+        .snippet-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .btn-small {
+            padding: 6px 16px;
+            font-size: 9px;
+        }
+        
+        .btn-danger {
+            background: rgba(240, 122, 106, 0.1);
+            border-color: rgba(240, 122, 106, 0.35);
+            color: #f07a6a;
+        }
+        
+        .btn-danger:hover {
+            background: rgba(240, 122, 106, 0.18);
+            border-color: rgba(240, 122, 106, 0.6);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--kira-text-secondary);
+        }
+        
+        .empty-state h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+        
+        /* Language toggle styles */
+        [data-lang="ja"] { display: none; }
+        body.lang-ja [data-lang="en"] { display: none; }
+        body.lang-ja [data-lang="ja"] { display: inline; }
+        
+        /* Syntax highlighting */
+        .token.comment { color: rgba(245,240,250,0.4); }
+        .token.string { color: #aadc78; }
+        .token.number { color: #f5c87a; }
+        .token.keyword { color: #c9a8e0; }
+        .token.function { color: #6ab0f5; }
+        .token.operator { color: #7de8e8; }
+        .token.punctuation { color: rgba(245,240,250,0.6); }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .snippet-card.new {
+            animation: fadeIn 0.4s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 24px 16px;
+            }
+            
+            .header h1 {
+                font-size: 36px;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .snippet-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow-top"></div>
+    <div class="bg-glow-bottom"></div>
+    
+    <button class="lang-toggle" onclick="toggleLanguage()">
+        <span data-lang="en">日本語</span>
+        <span data-lang="ja">English</span>
+    </button>
+    
+    <div class="container">
+        <header class="header">
+            <h1>CodeCraft</h1>
+            <p class="subtitle">
+                <span data-lang="en">Curate your code knowledge with beautiful syntax highlighting</span>
+                <span data-lang="ja">美しいシンタックスハイライトでコード知識を整理</span>
+            </p>
+            <p class="subtitle-jp">
+                <span data-lang="en">あなたのコード。あなたの知恵。</span>
+                <span data-lang="ja">Your code. Your wisdom.</span>
+            </p>
+        </header>
+        
+        <section class="add-section">
+            <h3>
+                <span data-lang="en">Add New Snippet</span>
+                <span data-lang="ja">新しいスニペット</span>
+            </h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <input type="text" id="snippet-title" placeholder="Title">
+                </div>
+                <div class="form-group half">
+                    <select id="snippet-language">
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="bash">Bash</option>
+                        <option value="sql">SQL</option>
+                        <option value="json">JSON</option>
+                        <option value="markdown">Markdown</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <textarea id="snippet-code" placeholder="Paste your code here..."></textarea>
+            </div>
+            <div class="form-group">
+                <input type="text" id="snippet-tags" placeholder="Tags (comma separated)">
+            </div>
+            <button class="btn" onclick="addSnippet()">
+                <span data-lang="en">Save Snippet</span>
+                <span data-lang="ja">保存</span>
+            </button>
+        </section>
+        
+        <section class="search-section">
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Search snippets or tags..." oninput="filterSnippets()">
+            </div>
+        </section>
+        
+        <section class="snippets-section" id="snippets-container">
+            <div class="empty-state" id="empty-state">
+                <h3>
+                    <span data-lang="en">No snippets yet</span>
+                    <span data-lang="ja">まだスニペットがありません</span>
+                </h3>
+                <p>
+                    <span data-lang="en">Start building your code knowledge base</span>
+                    <span data-lang="ja">コード知識ベースを作り始めましょう</span>
+                </p>
+            </div>
+        </section>
+    </div>
+    
+    <!-- Kira Feedback Widget -->
+    <div id="kira-feedback" style="position:fixed;bottom:16px;right:16px;z-index:9999;">
+      <button id="kira-fb-btn" onclick="document.getElementById('kira-fb-form').style.display=document.getElementById('kira-fb-form').style.display==='none'?'flex':'none'" style="background:rgba(201,168,224,0.12);border:0.5px solid rgba(201,168,224,0.3);border-radius:40px;padding:8px 16px;color:rgba(245,240,250,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;">Feedback</button>
+      <form id="kira-fb-form" style="display:none;flex-direction:column;gap:8px;margin-top:8px;background:rgba(11,11,15,0.95);border:0.5px solid rgba(201,168,224,0.2);border-radius:12px;padding:16px;min-width:240px;" onsubmit="return kiraSubmitFeedback(event)">
+        <select id="kira-fb-type" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;">
+          <option value="love">Love it</option><option value="bug">Bug report</option><option value="idea">Feature idea</option><option value="other">Other</option>
+        </select>
+        <textarea id="kira-fb-msg" placeholder="Your thoughts..." rows="3" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(201,168,224,0.18);border-radius:8px;padding:8px;color:rgba(245,240,250,0.8);font-size:13px;resize:vertical;"></textarea>
+        <button type="submit" style="background:rgba(201,168,224,0.1);border:0.5px solid rgba(201,168,224,0.35);border-radius:40px;padding:8px;color:#c9a8e0;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.15em;cursor:pointer;text-transform:uppercase;">Send</button>
+        <div id="kira-fb-status" style="font-size:11px;color:rgba(245,240,250,0.5);text-align:center;"></div>
+      </form>
+    </div>
+    
+    <script>
+        let snippets = JSON.parse(localStorage.getItem('codecraft_snippets') || '[]');
+        let editingId = null;
+        
+        function saveToStorage() {
+            localStorage.setItem('codecraft_snippets', JSON.stringify(snippets));
+        }
+        
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+        
+        function addSnippet() {
+            const title = document.getElementById('snippet-title').value.trim();
+            const language = document.getElementById('snippet-language').value;
+            const code = document.getElementById('snippet-code').value.trim();
+            const tagsInput = document.getElementById('snippet-tags').value.trim();
+            
+            if (!title || !code) {
+                alert('Please fill in title and code');
+                return;
+            }
+            
+            const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
+            
+            const snippet = {
+                id: editingId || generateId(),
+                title,
+                language,
+                code,
+                tags,
+                created: editingId ? snippets.find(s => s.id === editingId).created : new Date().toISOString()
+            };
+            
+            if (editingId) {
+                const index = snippets.findIndex(s => s.id === editingId);
+                snippets[index] = snippet;
+                editingId = null;
+            } else {
+                snippets.unshift(snippet);
+            }
+            
+            saveToStorage();
+            clearForm();
+            renderSnippets();
+        }
+        
+        function clearForm() {
+            document.getElementById('snippet-title').value = '';
+            document.getElementById('snippet-language').value = 'javascript';
+            document.getElementById('snippet-code').value = '';
+            document.getElementById('snippet-tags').value = '';
+            editingId = null;
+        }
+        
+        function editSnippet(id) {
+            const snippet = snippets.find(s => s.id === id);
+            if (!snippet) return;
+            
+            document.getElementById('snippet-title').value = snippet.title;
+            document.getElementById('snippet-language').value = snippet.language;
+            document.getElementById('snippet-code').value = snippet.code;
+            document.getElementById('snippet-tags').value = snippet.tags.join(', ');
+            editingId = id;
+            
+            document.getElementById('snippet-title').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function deleteSnippet(id) {
+            if (!confirm('Delete this snippet?')) return;
+            
+            snippets = snippets.filter(s => s.id !== id);
+            saveToStorage();
+            renderSnippets();
+        }
+        
+        function highlightCode(code, language) {
+            // Simple syntax highlighting
+            let highlighted = code
+                .replace(/\/\*[\s\S]*?\*\//g, '<span class="token comment">$&</span>')
+                .replace(/\/\/.*$/gm, '<span class="token comment">$&</span>')
+                .replace(/#.*$/gm, '<span class="token comment">$&</span>')
+                .replace(/(['"`])(?:(?!\1)[^\\\r\n]|\\[\s\S])*\1/g, '<span class="token string">$&</span>')
+                .replace(/\b\d+(?:\.\d+)?\b/g, '<span class="token number">$&</span>')
+                .replace(/\b(function|const|let|var|if|else|for|while|return|class|import|export|async|await|try|catch|throw|new|this|super|extends|static|public|private|protected|def|from|as|in|and|or|not|is|None|True|False|null|undefined|boolean|string|number|object)\b/g, '<span class="token keyword">$&</span>')
+                .replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g, '<span class="token function">$1</span>')
+                .replace(/[+\-*\/=<>!&|%^~?:]/g, '<span class="token operator">$&</span>')
+                .replace(/[{}()\[\];,\.]/g, '<span class="token punctuation">$&</span>');
+            
+            return highlighted;
+        }
+        
+        function renderSnippets(filteredSnippets = snippets) {
+            const container = document.getElementById('snippets-container');
+            const emptyState = document.getElementById('empty-state');
+            
+            if (filteredSnippets.length === 0) {
+                container.innerHTML = '';
+                container.appendChild(emptyState);
+                return;
+            }
+            
+            emptyState.remove();
+            
+            container.innerHTML = filteredSnippets.map(snippet => `
+                <div class="snippet-card" data-id="${snippet.id}">
+                    <div class="snippet-header">
+                        <h3 class="snippet-title">${escapeHtml(snippet.title)}</h3>
+                        <span class="snippet-lang">${snippet.language}</span>
+                    </div>
+                    <div class="snippet-code"><code>${highlightCode(escapeHtml(snippet.code), snippet.language)}</code></div>
+                    ${snippet.tags.length > 0 ? `
+                        <div class="snippet-tags">
+                            ${snippet.tags.map(tag => `<span class="tag" onclick="searchByTag('${tag}')">${escapeHtml(tag)}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="snippet-actions">
+                        <button class="btn btn-small" onclick="editSnippet('${snippet.id}')">
+                            <span data-lang="en">Edit</span>
+                            <span data-lang="ja">編集</span>
+                        </button>
+                        <button class="btn btn-small btn-danger" onclick="deleteSnippet('${snippet.id}')">
+                            <span data-lang="en">Delete</span>
+                            <span data-lang="ja">削除</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Add animation to new cards
+            const cards = container.querySelectorAll('.snippet-card');
+            cards.forEach((card, index) => {
+                if (index === 0 && !card.classList.contains('new')) {
+                    card.classList.add('new');
+                }
+            });
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function filterSnippets() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            
+            if (!query) {
+                renderSnippets();
+                return;
+            }
+            
+            const filtered = snippets.filter(snippet => 
+                snippet.title.toLowerCase().includes(query) ||
+                snippet.code.toLowerCase().includes(query) ||
+                snippet.language.toLowerCase().includes(query) ||
+                snippet.tags.some(tag => tag.toLowerCase().includes(query))
+            );
+            
+            renderSnippets(filtered);
+        }
+        
+        function searchByTag(tag) {
+            document.getElementById('search-input').value = tag;
+            filterSnippets();
+        }
+        
+        function toggleLanguage() {
+            document.body.classList.toggle('lang-ja');
+            localStorage.setItem('codecraft_lang', document.body.classList.contains('lang-ja') ? 'ja' : 'en');
+        }
+        
+        // Feedback widget functions
+        function kiraSubmitFeedback(e){
+          e.preventDefault();
+          var type=document.getElementById('kira-fb-type').value;
+          var msg=document.getElementById('kira-fb-msg').value.trim();
+          if(!msg){document.getElementById('kira-fb-status').textContent='Please write something';return false;}
+          var APP_NAME=document.title||location.pathname.split('/').filter(Boolean).pop()||'unknown';
+          var url='https://firestore.googleapis.com/v1/projects/kira-memory/databases/(default)/documents/kira_app_feedback';
+          fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{
+            app_name:{stringValue:APP_NAME},type:{stringValue:type},message:{stringValue:msg.substring(0,1000)},
+            url:{stringValue:location.href.substring(0,200)},timestamp:{stringValue:new Date().toISOString()}
+          }})}).then(function(){
+            document.getElementById('kira-fb-status').textContent='Thank you!';
+            document.getElementById('kira-fb-msg').value='';
+            setTimeout(function(){document.getElementById('kira-fb-form').style.display='none';document.getElementById('kira-fb-status').textContent='';},2000);
+          }).catch(function(){document.getElementById('kira-fb-status').textContent='Failed to send';});
+          return false;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Restore language preference
+            const savedLang = localStorage.getItem('codecraft_lang');
+            if (savedLang === 'ja') {
+                document.body.classList.add('lang-ja');
+            }
+            
+            renderSnippets();
+        });
+    </script>
+</body>
+</html>
